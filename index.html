@@ -562,8 +562,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>老奶奶面馆库存管理系统beta</h1>
-            <p class="subtitle">轻松管理调料进货、消耗与库存</p>
+            <h1>老奶奶面馆出入库管理系统beta</h1>
+            <p class="subtitle">自由管理进货、消耗与库存</p>
         </header>
         
         <div class="main-content">
@@ -855,7 +855,7 @@
                                 <label for="dept-end-date">结束日期:</label>
                                 <input type="date" id="dept-end-date">
                             </div>
-                            <button class="btn btn-primary" id="filter-dept">筛选部门操作记录</button>
+                            <button class="btn btn-primary" id="filter-dept">查看所有部门操作记录</button>
                         </div>
                         
                         <div class="table-container">
@@ -885,6 +885,7 @@
                                             <th>数量</th>
                                             <th>单价(元)</th>
                                             <th>金额(元)</th>
+                                            <th>部门</th>
                                             <th>目标部门</th>
                                             <th>备注</th>
                                         </tr>
@@ -910,6 +911,13 @@
                             <div class="form-group">
                                 <label for="report-end-date">结束日期:</label>
                                 <input type="date" id="report-end-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="report-department">选择部门:</label>
+                                <select id="report-department">
+                                    <option value="all">所有部门</option>
+                                    <!-- 部门选项将通过JavaScript动态生成 -->
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label for="report-category">选择品类:</label>
@@ -1147,8 +1155,19 @@
                 });
             },
 
+            // 获取所有部门在指定日期的操作记录
+            getAllDepartmentsHistory(startDate, endDate) {
+                return this.operationHistory.filter(record => {
+                    const recordDate = record.date;
+                    const matchesDate = (!startDate || recordDate >= startDate) && 
+                                       (!endDate || recordDate <= endDate);
+                    
+                    return matchesDate;
+                });
+            },
+
             // 获取自定义日期范围的报表数据
-            getCustomDateReport(startDate, endDate, categoryFilter = 'all') {
+            getCustomDateReport(startDate, endDate, departmentFilter = 'all', categoryFilter = 'all') {
                 const reportData = {};
                 
                 // 筛选指定日期范围内的操作记录
@@ -1156,9 +1175,11 @@
                     const matchesDate = (!startDate || record.date >= startDate) && 
                                        (!endDate || record.date <= endDate);
                     
+                    const matchesDepartment = departmentFilter === 'all' || record.department === departmentFilter;
+                    
                     const matchesCategory = categoryFilter === 'all' || record.category === categoryFilter;
                     
-                    return matchesDate && matchesCategory;
+                    return matchesDate && matchesDepartment && matchesCategory;
                 });
                 
                 // 按部门和品类汇总数据
@@ -1355,7 +1376,7 @@
                 document.getElementById('filter-history').addEventListener('click', () => this.filterHistory());
                 
                 // 添加部门记录筛选按钮事件监听
-                document.getElementById('filter-dept').addEventListener('click', () => this.filterDepartmentHistory());
+                document.getElementById('filter-dept').addEventListener('click', () => this.viewAllDepartmentsHistory());
                 
                 // 数据导出和导入按钮
                 document.getElementById('export-data-btn').addEventListener('click', () => this.exportData());
@@ -1450,11 +1471,13 @@
                 const departmentSelect = document.getElementById('department');
                 const inventoryDeptSelect = document.getElementById('inventory-dept');
                 const transferToSelect = document.getElementById('transfer-to');
+                const reportDepartmentSelect = document.getElementById('report-department');
                 
                 // 清空现有选项
                 departmentSelect.innerHTML = '';
                 inventoryDeptSelect.innerHTML = '';
                 transferToSelect.innerHTML = '';
+                reportDepartmentSelect.innerHTML = '<option value="all">所有部门</option>';
                 
                 // 添加部门选项
                 for (const department in DataManager.departmentConfig) {
@@ -1472,6 +1495,11 @@
                     transferOption.value = department;
                     transferOption.textContent = department;
                     transferToSelect.appendChild(transferOption);
+                    
+                    const reportOption = document.createElement('option');
+                    reportOption.value = department;
+                    reportOption.textContent = department;
+                    reportDepartmentSelect.appendChild(reportOption);
                 }
                 
                 // 设置默认选中
@@ -1631,6 +1659,68 @@
                 });
             },
             
+            // 查看所有部门操作记录
+            viewAllDepartmentsHistory() {
+                const startDate = document.getElementById('dept-start-date').value;
+                const endDate = document.getElementById('dept-end-date').value;
+                
+                const allDeptHistory = DataManager.getAllDepartmentsHistory(startDate, endDate);
+                const deptHistoryBody = document.getElementById('dept-history-body');
+                const deptHistorySection = document.getElementById('dept-history-section');
+                const deptHistoryTitle = document.getElementById('dept-history-title');
+                
+                deptHistoryBody.innerHTML = '';
+                deptHistoryTitle.textContent = `所有部门操作记录 (${startDate || '开始'} 至 ${endDate || '结束'})`;
+                
+                if (allDeptHistory.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="9" style="text-align: center;">指定日期范围内没有操作记录</td>`;
+                    deptHistoryBody.appendChild(row);
+                } else {
+                    allDeptHistory.forEach(record => {
+                        const row = document.createElement('tr');
+                        
+                        // 格式化操作类型显示
+                        let typeDisplay = '';
+                        let typeClass = '';
+                        switch (record.type) {
+                            case 'in': 
+                                typeDisplay = '进货';
+                                typeClass = 'operation-in';
+                                break;
+                            case 'out': 
+                                typeDisplay = '消耗';
+                                typeClass = 'operation-out';
+                                break;
+                            case 'transfer': 
+                                typeDisplay = '调拨';
+                                typeClass = 'operation-transfer';
+                                break;
+                        }
+                        
+                        const price = record.price || DataManager.categoryConfig[record.category]?.defaultPrice || 0;
+                        const amount = record.quantity * price;
+                        
+                        row.innerHTML = `
+                            <td>${record.date}</td>
+                            <td>${record.category}</td>
+                            <td class="${typeClass}">${typeDisplay}</td>
+                            <td>${record.quantity}</td>
+                            <td>${price.toFixed(2)}</td>
+                            <td>${amount.toFixed(2)}</td>
+                            <td>${record.department}</td>
+                            <td>${record.transferTo || '-'}</td>
+                            <td>${record.notes || '-'}</td>
+                        `;
+                        
+                        deptHistoryBody.appendChild(row);
+                    });
+                }
+                
+                deptHistorySection.style.display = 'block';
+                deptHistorySection.scrollIntoView({ behavior: 'smooth' });
+            },
+            
             // 渲染品类管理表格
             renderCategoryTable() {
                 const categoryBody = document.getElementById('category-body');
@@ -1770,7 +1860,7 @@
                 
                 if (deptHistory.length === 0) {
                     const row = document.createElement('tr');
-                    row.innerHTML = `<td colspan="8" style="text-align: center;">该部门在指定日期范围内没有操作记录</td>`;
+                    row.innerHTML = `<td colspan="9" style="text-align: center;">该部门在指定日期范围内没有操作记录</td>`;
                     deptHistoryBody.appendChild(row);
                 } else {
                     deptHistory.forEach(record => {
@@ -1797,12 +1887,6 @@
                         const price = record.price || DataManager.categoryConfig[record.category]?.defaultPrice || 0;
                         const amount = record.quantity * price;
                         
-                        // 判断是调拨入还是调拨出
-                        let transferDirection = '-';
-                        if (record.type === 'transfer') {
-                            transferDirection = record.department === department ? `调拨到 ${record.transferTo}` : `从 ${record.department} 调拨`;
-                        }
-                        
                         row.innerHTML = `
                             <td>${record.date}</td>
                             <td>${record.category}</td>
@@ -1810,7 +1894,8 @@
                             <td>${record.quantity}</td>
                             <td>${price.toFixed(2)}</td>
                             <td>${amount.toFixed(2)}</td>
-                            <td>${transferDirection}</td>
+                            <td>${record.department}</td>
+                            <td>${record.transferTo || '-'}</td>
                             <td>${record.notes || '-'}</td>
                         `;
                         
@@ -1820,19 +1905,6 @@
                 
                 deptHistorySection.style.display = 'block';
                 deptHistorySection.scrollIntoView({ behavior: 'smooth' });
-            },
-            
-            // 筛选部门操作记录
-            filterDepartmentHistory() {
-                const searchTerm = document.getElementById('department-search').value.toLowerCase();
-                
-                // 如果有搜索词，先执行部门搜索
-                if (searchTerm) {
-                    this.searchDepartment();
-                }
-                
-                // 显示提示信息
-                alert('请点击部门行中的"查看记录"按钮查看该部门的详细操作记录');
             },
             
             // 渲染仪表盘
@@ -1922,6 +1994,7 @@
                 
                 const startDate = document.getElementById('report-start-date').value;
                 const endDate = document.getElementById('report-end-date').value;
+                const departmentFilter = document.getElementById('report-department').value;
                 const categoryFilter = document.getElementById('report-category').value;
                 
                 if (!startDate || !endDate) {
@@ -1929,7 +2002,7 @@
                     return;
                 }
                 
-                const reportData = DataManager.getCustomDateReport(startDate, endDate, categoryFilter);
+                const reportData = DataManager.getCustomDateReport(startDate, endDate, departmentFilter, categoryFilter);
                 
                 if (reportData.length === 0) {
                     const row = document.createElement('tr');
@@ -1964,6 +2037,7 @@
             exportReportExcel() {
                 const startDate = document.getElementById('report-start-date').value;
                 const endDate = document.getElementById('report-end-date').value;
+                const departmentFilter = document.getElementById('report-department').value;
                 const categoryFilter = document.getElementById('report-category').value;
                 
                 if (!startDate || !endDate) {
@@ -1971,7 +2045,7 @@
                     return;
                 }
                 
-                const reportData = DataManager.getCustomDateReport(startDate, endDate, categoryFilter);
+                const reportData = DataManager.getCustomDateReport(startDate, endDate, departmentFilter, categoryFilter);
                 
                 if (reportData.length === 0) {
                     alert('没有数据可导出！');
