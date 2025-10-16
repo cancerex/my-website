@@ -1,0 +1,2571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>餐饮店调料库存管理系统</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-bg: #f5f7fa;
+            --card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --transition: all 0.3s ease;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: var(--light-bg);
+            color: #333;
+            line-height: 1.6;
+            padding: 10px;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #3498db, #2c3e50);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            padding: 15px;
+            gap: 15px;
+        }
+        
+        .sidebar {
+            flex: 1;
+            min-width: 200px;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: var(--card-shadow);
+        }
+        
+        .content-area {
+            flex: 4;
+            min-width: 300px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 15px;
+        }
+        
+        h2 {
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
+            color: var(--secondary-color);
+            font-size: 1.2rem;
+        }
+        
+        .nav-item {
+            display: block;
+            padding: 12px 15px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            color: #333;
+            text-decoration: none;
+            font-weight: 500;
+            transition: var(--transition);
+            cursor: pointer;
+        }
+        
+        .nav-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .nav-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .module {
+            display: none;
+        }
+        
+        .module.active {
+            display: block;
+        }
+        
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 12px;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+        
+        th {
+            background: var(--secondary-color);
+            color: white;
+            padding: 10px 12px;
+            text-align: left;
+            font-size: 0.85rem;
+        }
+        
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #e1e1e1;
+            font-size: 0.85rem;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        
+        .stock-warning {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+        
+        .stock-ok {
+            color: var(--success-color);
+        }
+        
+        .form-group {
+            margin-bottom: 12px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 0.85rem;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: var(--transition);
+        }
+        
+        select:focus, input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+        
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+        
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        
+        .btn-info:hover {
+            background-color: #138496;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .flex-group {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            margin-bottom: 12px;
+        }
+        
+        .flex-group .form-group {
+            flex: 1;
+            margin-bottom: 0;
+        }
+        
+        .dept-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .dept-stat-card {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-shadow: var(--card-shadow);
+            transition: var(--transition);
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        .dept-stat-card h3 {
+            margin-bottom: 6px;
+            color: var(--secondary-color);
+            font-size: 0.9rem;
+        }
+        
+        .dept-stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .action-buttons .btn {
+            padding: 6px 10px;
+            font-size: 0.8rem;
+        }
+        
+        .price-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+        
+        .total-amount {
+            font-weight: bold;
+            color: var(--danger-color);
+        }
+        
+        footer {
+            text-align: center;
+            padding: 15px;
+            background: var(--secondary-color);
+            color: white;
+            margin-top: 15px;
+            font-size: 0.8rem;
+        }
+        
+        .search-summary {
+            background: #e8f4fc;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-weight: bold;
+            border-left: 4px solid var(--primary-color);
+            font-size: 0.85rem;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .dashboard-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+            text-align: center;
+        }
+        
+        .dashboard-card h3 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: var(--secondary-color);
+        }
+        
+        .dashboard-card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .dashboard-card.warning .value {
+            color: var(--warning-color);
+        }
+        
+        .dashboard-card.danger .value {
+            color: var(--danger-color);
+        }
+        
+        .dashboard-card.success .value {
+            color: var(--success-color);
+        }
+        
+        .alert-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+        
+        .alert-high {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .alert-medium {
+            background-color: var(--warning-color);
+            color: white;
+        }
+        
+        .alert-low {
+            background-color: var(--success-color);
+            color: white;
+        }
+        
+        .operation-in {
+            color: var(--success-color);
+        }
+        
+        .operation-out {
+            color: var(--danger-color);
+        }
+        
+        .operation-transfer {
+            color: var(--warning-color);
+        }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            body {
+                padding: 5px;
+                font-size: 13px;
+            }
+            
+            .container {
+                border-radius: 5px;
+            }
+            
+            header {
+                padding: 12px;
+            }
+            
+            h1 {
+                font-size: 1.2rem;
+            }
+            
+            .subtitle {
+                font-size: 0.7rem;
+            }
+            
+            .main-content {
+                flex-direction: column;
+                padding: 10px;
+                gap: 10px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                padding: 10px;
+            }
+            
+            .content-area {
+                width: 100%;
+            }
+            
+            .section {
+                padding: 10px;
+            }
+            
+            h2 {
+                font-size: 1rem;
+            }
+            
+            .flex-group {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .flex-group .form-group {
+                width: 100%;
+            }
+            
+            .dept-stats {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            .export-buttons {
+                flex-direction: column;
+            }
+            
+            .dashboard-cards {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            
+            .dashboard-card {
+                padding: 10px;
+            }
+            
+            .dashboard-card .value {
+                font-size: 1.2rem;
+            }
+            
+            .nav-item {
+                padding: 10px 12px;
+                font-size: 0.85rem;
+            }
+            
+            th, td {
+                padding: 6px 8px;
+                font-size: 0.75rem;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+                font-size: 0.8rem;
+                width: 100%;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .action-buttons .btn {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            
+            select, input {
+                padding: 8px;
+                font-size: 0.85rem;
+            }
+            
+            .form-group {
+                margin-bottom: 8px;
+            }
+            
+            .table-container {
+                margin-top: 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .dept-stat-card {
+                min-width: 100%;
+            }
+            
+            .btn {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>老奶奶面馆库存管理系统beta</h1>
+            <p class="subtitle">轻松管理调料进货、消耗与库存</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="sidebar">
+                <h2>功能模块</h2>
+                <div class="nav-item active" data-module="dashboard">仪表盘</div>
+                <div class="nav-item" data-module="inventory">库存管理</div>
+                <div class="nav-item" data-module="operations">库存操作</div>
+                <div class="nav-item" data-module="categories">品类管理</div>
+                <div class="nav-item" data-module="departments">部门管理</div>
+                <div class="nav-item" data-module="reports">报表分析</div>
+                <div class="nav-item" data-module="export">数据导出</div>
+            </div>
+            
+            <div class="content-area">
+                <!-- 仪表盘模块 -->
+                <div class="module active" id="dashboard-module">
+                    <div class="section">
+                        <h2>库存总览</h2>
+                        <div class="dashboard-cards">
+                            <div class="dashboard-card">
+                                <h3>总库存品类</h3>
+                                <div class="value" id="total-categories">0</div>
+                            </div>
+                            <div class="dashboard-card">
+                                <h3>总库存金额</h3>
+                                <div class="value" id="total-amount">¥0</div>
+                            </div>
+                            <div class="dashboard-card warning">
+                                <h3>库存预警</h3>
+                                <div class="value" id="low-stock-count">0</div>
+                            </div>
+                            <div class="dashboard-card">
+                                <h3>本月进货量</h3>
+                                <div class="value" id="monthly-purchase">0</div>
+                            </div>
+                        </div>
+                        
+                        <h2>部门库存统计</h2>
+                        <div class="dept-stats" id="dashboard-dept-stats">
+                            <!-- 部门统计数据将通过JavaScript动态生成 -->
+                        </div>
+                        
+                        <h2>库存预警列表</h2>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>品类</th>
+                                        <th>部门</th>
+                                        <th>当前库存</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="alert-body">
+                                    <!-- 预警数据将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 库存管理模块 -->
+                <div class="module" id="inventory-module">
+                    <div class="section">
+                        <h2>当前库存</h2>
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="inventory-dept">选择部门</label>
+                                <select id="inventory-dept">
+                                    <!-- 部门选项将通过JavaScript动态生成 -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="inventory-search">搜索品类</label>
+                                <input type="text" id="inventory-search" placeholder="输入品类名称...">
+                            </div>
+                            <button class="btn btn-info" id="search-inventory">搜索</button>
+                            <button class="btn btn-warning" id="reset-inventory-search">重置</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>品类</th>
+                                        <th>单位</th>
+                                        <th>进货量</th>
+                                        <th>消耗量</th>
+                                        <th>库存量</th>
+                                        <th>单价(元)</th>
+                                        <th>库存金额(元)</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="inventory-body">
+                                    <!-- 库存数据将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 库存操作模块 -->
+                <div class="module" id="operations-module">
+                    <div class="section">
+                        <h2>库存操作</h2>
+                        <div class="form-group">
+                            <label for="category">选择品类</label>
+                            <select id="category">
+                                <!-- 品类选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="quantity">数量</label>
+                            <input type="number" id="quantity" min="1" placeholder="请输入数量">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="operation-type">操作类型</label>
+                            <select id="operation-type">
+                                <option value="in">进货入库</option>
+                                <option value="out">消耗出库</option>
+                                <option value="transfer">调拨到其他部门</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="department-group">
+                            <label for="department">部门</label>
+                            <select id="department">
+                                <!-- 部门选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group" id="transfer-group" style="display: none;">
+                            <label for="transfer-to">调拨到部门</label>
+                            <select id="transfer-to">
+                                <!-- 部门选项将通过JavaScript动态生成 -->
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="date">日期</label>
+                            <input type="date" id="date" max="">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="notes">备注</label>
+                            <input type="text" id="notes" placeholder="可填写备注信息（选填）">
+                        </div>
+                        
+                        <div class="button-group">
+                            <button class="btn btn-primary" id="save-btn">保存操作</button>
+                            <button class="btn btn-warning" id="undo-btn">撤销上一次操作</button>
+                        </div>
+                    </div>
+                    
+                    <div class="section">
+                        <h2>操作记录</h2>
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="history-search">搜索品类</label>
+                                <input type="text" id="history-search" placeholder="输入品类名称...">
+                            </div>
+                            <div class="form-group">
+                                <label for="history-operation-type">操作类型</label>
+                                <select id="history-operation-type">
+                                    <option value="all">全部类型</option>
+                                    <option value="in">进货</option>
+                                    <option value="out">消耗</option>
+                                    <option value="transfer">调拨</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-info" id="search-history">搜索</button>
+                            <button class="btn btn-warning" id="reset-history-search">重置</button>
+                        </div>
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="history-start-date">开始日期:</label>
+                                <input type="date" id="history-start-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="history-end-date">结束日期:</label>
+                                <input type="date" id="history-end-date">
+                            </div>
+                            <button class="btn btn-primary" id="filter-history">筛选记录</button>
+                        </div>
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>日期</th>
+                                        <th>品类</th>
+                                        <th>类型</th>
+                                        <th>数量</th>
+                                        <th>单价(元)</th>
+                                        <th>金额(元)</th>
+                                        <th>部门</th>
+                                        <th>目标部门</th>
+                                        <th>备注</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-body">
+                                    <!-- 操作记录将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 品类管理模块 -->
+                <div class="module" id="categories-module">
+                    <div class="section">
+                        <h2>品类管理</h2>
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="new-category-name">品类名称</label>
+                                <input type="text" id="new-category-name" placeholder="例如：酱油">
+                            </div>
+                            <div class="form-group">
+                                <label for="new-category-unit">单位</label>
+                                <input type="text" id="new-category-unit" placeholder="例如：瓶">
+                            </div>
+                            <div class="form-group">
+                                <label for="new-category-price">默认单价(元)</label>
+                                <input type="number" id="new-category-price" min="0" step="0.01" placeholder="例如：25.5">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-success" id="add-category-btn">添加品类</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="category-search">搜索品类</label>
+                                <input type="text" id="category-search" placeholder="输入品类名称...">
+                            </div>
+                            <button class="btn btn-info" id="search-category">搜索</button>
+                            <button class="btn btn-warning" id="reset-category-search">重置</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>品类名称</th>
+                                        <th>单位</th>
+                                        <th>默认单价(元)</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="category-body">
+                                    <!-- 品类数据将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 部门管理模块 -->
+                <div class="module" id="departments-module">
+                    <div class="section">
+                        <h2>部门管理</h2>
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="new-department-name">部门名称</label>
+                                <input type="text" id="new-department-name" placeholder="例如：后厨">
+                            </div>
+                            <div class="form-group">
+                                <button class="btn btn-success" id="add-department-btn">添加部门</button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="department-search">搜索部门</label>
+                                <input type="text" id="department-search" placeholder="输入部门名称...">
+                            </div>
+                            <button class="btn btn-info" id="search-department">搜索</button>
+                            <button class="btn btn-warning" id="reset-department-search">重置</button>
+                        </div>
+                        
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="dept-start-date">开始日期:</label>
+                                <input type="date" id="dept-start-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="dept-end-date">结束日期:</label>
+                                <input type="date" id="dept-end-date">
+                            </div>
+                            <button class="btn btn-primary" id="filter-dept">筛选部门操作记录</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>部门名称</th>
+                                        <th>进货量</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="department-body">
+                                    <!-- 部门数据将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="section" id="dept-history-section" style="display: none;">
+                            <h3 id="dept-history-title">部门操作记录</h3>
+                            <div class="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>日期</th>
+                                            <th>品类</th>
+                                            <th>类型</th>
+                                            <th>数量</th>
+                                            <th>单价(元)</th>
+                                            <th>金额(元)</th>
+                                            <th>目标部门</th>
+                                            <th>备注</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dept-history-body">
+                                        <!-- 部门操作记录将通过JavaScript动态生成 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 报表分析模块 -->
+                <div class="module" id="reports-module">
+                    <div class="section">
+                        <h2>自定义日期报表</h2>
+                        <div class="flex-group">
+                            <div class="form-group">
+                                <label for="report-start-date">开始日期:</label>
+                                <input type="date" id="report-start-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="report-end-date">结束日期:</label>
+                                <input type="date" id="report-end-date">
+                            </div>
+                            <div class="form-group">
+                                <label for="report-category">选择品类:</label>
+                                <select id="report-category">
+                                    <option value="all">所有品类</option>
+                                    <!-- 品类选项将通过JavaScript动态生成 -->
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" id="generate-report">生成报表</button>
+                            <button class="btn btn-success" id="export-report-excel">导出Excel</button>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>部门</th>
+                                        <th>品类</th>
+                                        <th>进货总量</th>
+                                        <th>进货总金额(元)</th>
+                                        <th>调拨入总量</th>
+                                        <th>调拨入金额(元)</th>
+                                        <th>调拨出总量</th>
+                                        <th>调拨出金额(元)</th>
+                                        <th>消耗总量</th>
+                                        <th>消耗总金额(元)</th>
+                                        <th>净进货量</th>
+                                        <th>净金额(元)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthly-report-body">
+                                    <!-- 月度报表数据将通过JavaScript动态生成 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 数据导出模块 -->
+                <div class="module" id="export-module">
+                    <div class="section">
+                        <h2>数据导出与备份</h2>
+                        <p>为确保数据安全，请定期导出数据备份。</p>
+                        
+                        <div class="export-buttons">
+                            <button class="btn btn-primary" id="export-data-btn">导出数据备份</button>
+                            <button class="btn btn-warning" id="import-data-btn">导入数据备份</button>
+                            <button class="btn btn-info" id="print-report-btn">打印库存报表</button>
+                            <button class="btn btn-success" id="quick-export-btn">快速导出Excel</button>
+                        </div>
+                        
+                        <div class="form-group" style="margin-top: 15px;">
+                            <label for="data-file">选择备份文件:</label>
+                            <input type="file" id="data-file" accept=".json">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="auto-backup">自动备份设置:</label>
+                            <select id="auto-backup">
+                                <option value="none">不自动备份</option>
+                                <option value="daily">每天备份</option>
+                                <option value="weekly">每周备份</option>
+                                <option value="monthly">每月备份</option>
+                            </select>
+                        </div>
+                        
+                        <div id="backup-status" style="margin-top: 10px; font-size: 0.85rem; color: #666;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>餐饮店调料库存管理系统 &copy; 2023</p>
+        </footer>
+    </div>
+
+    <script>
+        // 数据管理模块
+        const DataManager = {
+            // 初始化品类配置
+            categoryConfig: JSON.parse(localStorage.getItem('categoryConfig')) || {
+                "大米": { unit: "袋", defaultPrice: 50 },
+                "味极鲜": { unit: "箱", defaultPrice: 120 },
+                "鸡汁": { unit: "瓶", defaultPrice: 25 },
+                "鸡蛋": { unit: "箱", defaultPrice: 45 },
+                "味精": { unit: "箱", defaultPrice: 80 },
+                "鸡精": { unit: "箱", defaultPrice: 90 }
+            },
+
+            // 初始化库存数据 - 按部门独立
+            inventoryData: JSON.parse(localStorage.getItem('inventoryData')) || {},
+            
+            // 初始化部门数据
+            departmentConfig: JSON.parse(localStorage.getItem('departmentConfig')) || {
+                "后厨": 0,
+                "前厅": 0,
+                "中央厨房": 0
+            },
+
+            // 初始化操作记录
+            operationHistory: JSON.parse(localStorage.getItem('operationHistory')) || [],
+            
+            // 历史状态堆栈，用于撤销操作
+            historyStack: JSON.parse(localStorage.getItem('historyStack')) || [],
+
+            // 保存当前状态到历史堆栈
+            saveStateToHistory() {
+                // 最多保存10个历史状态
+                if (this.historyStack.length >= 10) {
+                    this.historyStack.shift();
+                }
+                
+                // 保存当前状态
+                this.historyStack.push({
+                    inventoryData: JSON.parse(JSON.stringify(this.inventoryData)),
+                    departmentConfig: JSON.parse(JSON.stringify(this.departmentConfig)),
+                    operationHistory: JSON.parse(JSON.stringify(this.operationHistory)),
+                    categoryConfig: JSON.parse(JSON.stringify(this.categoryConfig))
+                });
+                
+                // 保存历史堆栈到本地存储
+                localStorage.setItem('historyStack', JSON.stringify(this.historyStack));
+            },
+
+            // 保存所有数据到本地存储
+            saveAllData() {
+                localStorage.setItem('categoryConfig', JSON.stringify(this.categoryConfig));
+                localStorage.setItem('inventoryData', JSON.stringify(this.inventoryData));
+                localStorage.setItem('departmentConfig', JSON.stringify(this.departmentConfig));
+                localStorage.setItem('operationHistory', JSON.stringify(this.operationHistory));
+                localStorage.setItem('historyStack', JSON.stringify(this.historyStack));
+            },
+
+            // 初始化库存数据 - 按部门独立
+            initializeInventoryData() {
+                // 确保每个部门都有完整的品类数据
+                for (const department in this.departmentConfig) {
+                    if (!this.inventoryData.hasOwnProperty(department)) {
+                        this.inventoryData[department] = {};
+                    }
+                    
+                    for (const category in this.categoryConfig) {
+                        if (!this.inventoryData[department].hasOwnProperty(category)) {
+                            this.inventoryData[department][category] = {
+                                unit: this.categoryConfig[category].unit,
+                                purchase: 0,
+                                consume: 0,
+                                stock: 0,
+                                currentPrice: this.categoryConfig[category].defaultPrice || 0,
+                                totalAmount: 0
+                            };
+                        }
+                    }
+                }
+                
+                this.saveAllData();
+            },
+
+            // 获取库存预警数据
+            getStockAlerts() {
+                const alerts = [];
+                
+                for (const department in this.inventoryData) {
+                    for (const category in this.inventoryData[department]) {
+                        const item = this.inventoryData[department][category];
+                        const stock = item.purchase - item.consume;
+                        
+                        if (stock <= 0) {
+                            alerts.push({
+                                category,
+                                department,
+                                stock,
+                                level: 'high'
+                            });
+                        } else if (stock < 5) {
+                            alerts.push({
+                                category,
+                                department,
+                                stock,
+                                level: 'medium'
+                            });
+                        }
+                    }
+                }
+                
+                return alerts;
+            },
+
+            // 获取仪表盘统计数据
+            getDashboardStats() {
+                const stats = {
+                    totalCategories: Object.keys(this.categoryConfig).length,
+                    totalAmount: 0,
+                    lowStockCount: 0,
+                    monthlyPurchase: 0
+                };
+                
+                // 计算总库存金额
+                for (const department in this.inventoryData) {
+                    for (const category in this.inventoryData[department]) {
+                        const item = this.inventoryData[department][category];
+                        const stock = item.purchase - item.consume;
+                        stats.totalAmount += stock * item.currentPrice;
+                        
+                        if (stock <= 0 || stock < 5) {
+                            stats.lowStockCount++;
+                        }
+                    }
+                }
+                
+                // 计算本月进货量
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                const monthOperations = this.operationHistory.filter(record => 
+                    record.date && record.date.startsWith(currentMonth) && record.type === 'in'
+                );
+                
+                stats.monthlyPurchase = monthOperations.reduce((sum, record) => sum + record.quantity, 0);
+                
+                return stats;
+            },
+
+            // 获取部门操作记录
+            getDepartmentHistory(department, startDate, endDate) {
+                return this.operationHistory.filter(record => {
+                    const recordDate = record.date;
+                    const matchesDate = (!startDate || recordDate >= startDate) && 
+                                       (!endDate || recordDate <= endDate);
+                    
+                    // 匹配部门相关的记录（部门操作或调拨相关的记录）
+                    const matchesDepartment = record.department === department || 
+                                             (record.type === 'transfer' && record.transferTo === department);
+                    
+                    return matchesDate && matchesDepartment;
+                });
+            },
+
+            // 获取自定义日期范围的报表数据
+            getCustomDateReport(startDate, endDate, categoryFilter = 'all') {
+                const reportData = {};
+                
+                // 筛选指定日期范围内的操作记录
+                const filteredHistory = this.operationHistory.filter(record => {
+                    const matchesDate = (!startDate || record.date >= startDate) && 
+                                       (!endDate || record.date <= endDate);
+                    
+                    const matchesCategory = categoryFilter === 'all' || record.category === categoryFilter;
+                    
+                    return matchesDate && matchesCategory;
+                });
+                
+                // 按部门和品类汇总数据
+                filteredHistory.forEach(record => {
+                    const dept = record.department;
+                    const cat = record.category;
+                    const key = `${dept}-${cat}`;
+                    
+                    if (!reportData[key]) {
+                        reportData[key] = {
+                            department: dept,
+                            category: cat,
+                            purchaseQuantity: 0,
+                            purchaseAmount: 0,
+                            transferInQuantity: 0,
+                            transferInAmount: 0,
+                            transferOutQuantity: 0,
+                            transferOutAmount: 0,
+                            consumeQuantity: 0,
+                            consumeAmount: 0
+                        };
+                    }
+                    
+                    const price = record.price || this.categoryConfig[cat]?.defaultPrice || 0;
+                    const amount = record.quantity * price;
+                    
+                    if (record.type === 'in') {
+                        reportData[key].purchaseQuantity += record.quantity;
+                        reportData[key].purchaseAmount += amount;
+                    } else if (record.type === 'transfer') {
+                        // 调拨操作 - 源部门调拨出
+                        if (record.department === dept) {
+                            reportData[key].transferOutQuantity += record.quantity;
+                            reportData[key].transferOutAmount += amount;
+                        }
+                        
+                        // 目标部门调拨入
+                        const targetKey = `${record.transferTo}-${cat}`;
+                        if (!reportData[targetKey]) {
+                            reportData[targetKey] = {
+                                department: record.transferTo,
+                                category: cat,
+                                purchaseQuantity: 0,
+                                purchaseAmount: 0,
+                                transferInQuantity: 0,
+                                transferInAmount: 0,
+                                transferOutQuantity: 0,
+                                transferOutAmount: 0,
+                                consumeQuantity: 0,
+                                consumeAmount: 0
+                            };
+                        }
+                        reportData[targetKey].transferInQuantity += record.quantity;
+                        reportData[targetKey].transferInAmount += amount;
+                    } else if (record.type === 'out') {
+                        reportData[key].consumeQuantity += record.quantity;
+                        reportData[key].consumeAmount += amount;
+                    }
+                });
+                
+                // 计算净进货量和净金额
+                Object.keys(reportData).forEach(key => {
+                    const data = reportData[key];
+                    data.netQuantity = data.purchaseQuantity + data.transferInQuantity - 
+                                      data.transferOutQuantity - data.consumeQuantity;
+                    data.netAmount = data.purchaseAmount + data.transferInAmount - 
+                                    data.transferOutAmount - data.consumeAmount;
+                });
+                
+                return Object.values(reportData);
+            }
+        };
+
+        // UI管理模块
+        const UIManager = {
+            // 当前选中的库存部门
+            currentInventoryDept: Object.keys(DataManager.departmentConfig)[0] || "",
+            
+            // 初始化UI
+            initializeUI() {
+                // 先初始化数据
+                DataManager.initializeInventoryData();
+                
+                // 设置默认日期
+                this.setupDefaultDates();
+                
+                // 设置导航
+                this.setupNavigation();
+                
+                // 设置事件监听器
+                this.setupEventListeners();
+                
+                // 渲染所有UI组件
+                this.renderAll();
+            },
+            
+            // 设置默认日期
+            setupDefaultDates() {
+                const today = new Date().toISOString().split('T')[0];
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                const oneWeekAgoStr = oneWeekAgo.toISOString().split('T')[0];
+                
+                // 设置操作记录日期
+                document.getElementById('date').value = today;
+                document.getElementById('date').max = today;
+                
+                // 设置历史记录筛选日期
+                document.getElementById('history-start-date').value = oneWeekAgoStr;
+                document.getElementById('history-end-date').value = today;
+                
+                // 设置部门记录筛选日期
+                document.getElementById('dept-start-date').value = oneWeekAgoStr;
+                document.getElementById('dept-end-date').value = today;
+                
+                // 设置报表日期
+                document.getElementById('report-start-date').value = oneWeekAgoStr;
+                document.getElementById('report-end-date').value = today;
+            },
+            
+            // 设置导航
+            setupNavigation() {
+                const navItems = document.querySelectorAll('.nav-item');
+                
+                navItems.forEach(item => {
+                    item.addEventListener('click', () => {
+                        // 移除所有活动状态
+                        navItems.forEach(nav => nav.classList.remove('active'));
+                        document.querySelectorAll('.module').forEach(module => module.classList.remove('active'));
+                        
+                        // 设置当前活动状态
+                        item.classList.add('active');
+                        const moduleId = item.getAttribute('data-module') + '-module';
+                        document.getElementById(moduleId).classList.add('active');
+                        
+                        // 如果是仪表盘，刷新数据
+                        if (moduleId === 'dashboard-module') {
+                            this.renderDashboard();
+                        }
+                    });
+                });
+            },
+            
+            // 设置事件监听器
+            setupEventListeners() {
+                // 添加保存按钮事件监听
+                document.getElementById('save-btn').addEventListener('click', () => this.saveOperation());
+                
+                // 添加撤销按钮事件监听
+                document.getElementById('undo-btn').addEventListener('click', () => this.undoLastOperation());
+                
+                // 添加品类按钮事件监听
+                document.getElementById('add-category-btn').addEventListener('click', () => this.addCategory());
+                
+                // 添加部门按钮事件监听
+                document.getElementById('add-department-btn').addEventListener('click', () => this.addDepartment());
+                
+                // 添加生成报表按钮事件监听
+                document.getElementById('generate-report').addEventListener('click', () => this.generateCustomReport());
+                
+                // 添加导出报表按钮事件监听
+                document.getElementById('export-report-excel').addEventListener('click', () => this.exportReportExcel());
+                
+                // 添加搜索按钮事件监听
+                document.getElementById('search-inventory').addEventListener('click', () => this.searchInventory());
+                document.getElementById('search-history').addEventListener('click', () => this.searchHistory());
+                document.getElementById('search-category').addEventListener('click', () => this.searchCategory());
+                document.getElementById('search-department').addEventListener('click', () => this.searchDepartment());
+                
+                // 添加重置搜索按钮事件监听
+                document.getElementById('reset-inventory-search').addEventListener('click', () => this.resetInventorySearch());
+                document.getElementById('reset-history-search').addEventListener('click', () => this.resetHistorySearch());
+                document.getElementById('reset-category-search').addEventListener('click', () => this.resetCategorySearch());
+                document.getElementById('reset-department-search').addEventListener('click', () => this.resetDepartmentSearch());
+                
+                // 添加库存部门选择器事件监听
+                document.getElementById('inventory-dept').addEventListener('change', (e) => {
+                    this.currentInventoryDept = e.target.value;
+                    this.renderInventoryTable();
+                });
+                
+                // 添加操作类型变更事件监听
+                document.getElementById('operation-type').addEventListener('change', (e) => {
+                    const transferGroup = document.getElementById('transfer-group');
+                    
+                    if (e.target.value === 'transfer') {
+                        transferGroup.style.display = 'block';
+                    } else {
+                        transferGroup.style.display = 'none';
+                    }
+                });
+                
+                // 添加历史记录筛选按钮事件监听
+                document.getElementById('filter-history').addEventListener('click', () => this.filterHistory());
+                
+                // 添加部门记录筛选按钮事件监听
+                document.getElementById('filter-dept').addEventListener('click', () => this.filterDepartmentHistory());
+                
+                // 数据导出和导入按钮
+                document.getElementById('export-data-btn').addEventListener('click', () => this.exportData());
+                document.getElementById('import-data-btn').addEventListener('click', () => this.importData());
+                document.getElementById('print-report-btn').addEventListener('click', () => this.printReport());
+                document.getElementById('quick-export-btn').addEventListener('click', () => this.quickExportExcel());
+                
+                // 为品类价格输入框添加事件委托
+                document.addEventListener('change', (e) => {
+                    if (e.target.classList.contains('price-input')) {
+                        const category = e.target.getAttribute('data-category');
+                        const newPrice = parseFloat(e.target.value);
+                        this.updateCategoryPrice(category, newPrice);
+                    }
+                });
+                
+                // 为品类操作按钮添加事件委托
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-category-btn')) {
+                        const category = e.target.getAttribute('data-category');
+                        this.editCategory(category);
+                    } else if (e.target.classList.contains('delete-category-btn')) {
+                        const category = e.target.getAttribute('data-category');
+                        this.deleteCategory(category);
+                    }
+                });
+                
+                // 为部门操作按钮添加事件委托
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('edit-department-btn')) {
+                        const department = e.target.getAttribute('data-department');
+                        this.editDepartment(department);
+                    } else if (e.target.classList.contains('delete-department-btn')) {
+                        const department = e.target.getAttribute('data-department');
+                        this.deleteDepartment(department);
+                    } else if (e.target.classList.contains('view-dept-history-btn')) {
+                        const department = e.target.getAttribute('data-department');
+                        this.viewDepartmentHistory(department);
+                    }
+                });
+            },
+            
+            // 渲染所有UI组件
+            renderAll() {
+                this.renderCategorySelects();
+                this.renderDepartmentSelect();
+                this.renderInventoryTable();
+                this.renderOperationHistory();
+                this.renderCategoryTable();
+                this.renderDepartmentTable();
+                this.renderDashboard();
+                
+                // 更新报表
+                this.generateCustomReport();
+            },
+            
+            // 渲染品类下拉菜单
+            renderCategorySelects() {
+                const categorySelect = document.getElementById('category');
+                const reportCategorySelect = document.getElementById('report-category');
+                
+                // 清空现有选项
+                categorySelect.innerHTML = '';
+                reportCategorySelect.innerHTML = '<option value="all">所有品类</option>';
+                
+                // 添加品类选项
+                for (const category in DataManager.categoryConfig) {
+                    // 操作界面的品类选择
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = `${category}（${DataManager.categoryConfig[category].unit}）`;
+                    categorySelect.appendChild(option);
+                    
+                    // 自定义报表的品类选择
+                    const reportOption = document.createElement('option');
+                    reportOption.value = category;
+                    reportOption.textContent = category;
+                    reportCategorySelect.appendChild(reportOption);
+                }
+                
+                // 如果没有任何品类，添加提示
+                if (categorySelect.children.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "请先添加品类";
+                    categorySelect.appendChild(option);
+                }
+            },
+            
+            // 渲染部门下拉菜单
+            renderDepartmentSelect() {
+                const departmentSelect = document.getElementById('department');
+                const inventoryDeptSelect = document.getElementById('inventory-dept');
+                const transferToSelect = document.getElementById('transfer-to');
+                
+                // 清空现有选项
+                departmentSelect.innerHTML = '';
+                inventoryDeptSelect.innerHTML = '';
+                transferToSelect.innerHTML = '';
+                
+                // 添加部门选项
+                for (const department in DataManager.departmentConfig) {
+                    const option = document.createElement('option');
+                    option.value = department;
+                    option.textContent = department;
+                    departmentSelect.appendChild(option);
+                    
+                    const inventoryOption = document.createElement('option');
+                    inventoryOption.value = department;
+                    inventoryOption.textContent = department;
+                    inventoryDeptSelect.appendChild(inventoryOption);
+                    
+                    const transferOption = document.createElement('option');
+                    transferOption.value = department;
+                    transferOption.textContent = department;
+                    transferToSelect.appendChild(transferOption);
+                }
+                
+                // 设置默认选中
+                if (this.currentInventoryDept && DataManager.departmentConfig[this.currentInventoryDept]) {
+                    inventoryDeptSelect.value = this.currentInventoryDept;
+                }
+                
+                // 如果没有任何部门，添加提示
+                if (departmentSelect.children.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "请先添加部门";
+                    departmentSelect.appendChild(option);
+                    inventoryDeptSelect.appendChild(option.cloneNode(true));
+                    transferToSelect.appendChild(option.cloneNode(true));
+                }
+            },
+            
+            // 渲染库存表格
+            renderInventoryTable() {
+                const inventoryBody = document.getElementById('inventory-body');
+                inventoryBody.innerHTML = '';
+                
+                const department = this.currentInventoryDept;
+                const searchTerm = document.getElementById('inventory-search').value.toLowerCase();
+                
+                if (!DataManager.inventoryData[department]) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="8" style="text-align: center;">该部门暂无库存数据</td>`;
+                    inventoryBody.appendChild(row);
+                    return;
+                }
+                
+                let hasData = false;
+                
+                for (const category in DataManager.inventoryData[department]) {
+                    // 搜索过滤
+                    if (searchTerm && !category.toLowerCase().includes(searchTerm)) {
+                        continue;
+                    }
+                    
+                    hasData = true;
+                    const item = DataManager.inventoryData[department][category];
+                    const stock = item.purchase - item.consume;
+                    const stockAmount = stock * item.currentPrice;
+                    
+                    const row = document.createElement('tr');
+                    
+                    // 根据库存量设置样式
+                    let stockClass = 'stock-ok';
+                    if (stock <= 0) {
+                        stockClass = 'stock-warning';
+                    } else if (stock < 5) {
+                        stockClass = 'stock-warning';
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${category}</td>
+                        <td>${item.unit}</td>
+                        <td>${item.purchase}</td>
+                        <td>${item.consume}</td>
+                        <td class="${stockClass}">${stock}</td>
+                        <td>${item.currentPrice.toFixed(2)}</td>
+                        <td>${stockAmount.toFixed(2)}</td>
+                        <td>
+                            ${stock <= 0 ? '<span class="alert-badge alert-high">缺货</span>' : 
+                              stock < 5 ? '<span class="alert-badge alert-medium">库存低</span>' : 
+                              '<span class="alert-badge alert-low">正常</span>'}
+                        </td>
+                    `;
+                    
+                    inventoryBody.appendChild(row);
+                }
+                
+                // 如果没有数据，显示提示
+                if (!hasData) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="8" style="text-align: center;">${searchTerm ? '没有找到匹配的库存数据' : '该部门暂无库存数据'}</td>`;
+                    inventoryBody.appendChild(row);
+                }
+            },
+            
+            // 渲染操作历史表格
+            renderOperationHistory() {
+                this.filterHistory();
+            },
+            
+            // 按日期筛选操作记录
+            filterHistory() {
+                const historyBody = document.getElementById('history-body');
+                historyBody.innerHTML = '';
+                
+                const searchTerm = document.getElementById('history-search').value.toLowerCase();
+                const operationType = document.getElementById('history-operation-type').value;
+                const startDate = document.getElementById('history-start-date').value;
+                const endDate = document.getElementById('history-end-date').value;
+                
+                // 过滤操作记录
+                const filteredHistory = DataManager.operationHistory.filter(record => {
+                    const matchesSearch = !searchTerm || 
+                        record.category.toLowerCase().includes(searchTerm) ||
+                        (record.notes && record.notes.toLowerCase().includes(searchTerm));
+                    
+                    const matchesType = operationType === 'all' || record.type === operationType;
+                    
+                    const matchesDate = (!startDate || record.date >= startDate) && 
+                                       (!endDate || record.date <= endDate);
+                    
+                    return matchesSearch && matchesType && matchesDate;
+                });
+                
+                // 显示操作记录
+                if (filteredHistory.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="9" style="text-align: center;">没有找到匹配的操作记录</td>`;
+                    historyBody.appendChild(row);
+                    return;
+                }
+                
+                filteredHistory.forEach(record => {
+                    const row = document.createElement('tr');
+                    
+                    // 格式化操作类型显示
+                    let typeDisplay = '';
+                    let typeClass = '';
+                    switch (record.type) {
+                        case 'in': 
+                            typeDisplay = '进货';
+                            typeClass = 'operation-in';
+                            break;
+                        case 'out': 
+                            typeDisplay = '消耗';
+                            typeClass = 'operation-out';
+                            break;
+                        case 'transfer': 
+                            typeDisplay = '调拨';
+                            typeClass = 'operation-transfer';
+                            break;
+                    }
+                    
+                    const price = record.price || DataManager.categoryConfig[record.category]?.defaultPrice || 0;
+                    const amount = record.quantity * price;
+                    
+                    row.innerHTML = `
+                        <td>${record.date}</td>
+                        <td>${record.category}</td>
+                        <td class="${typeClass}">${typeDisplay}</td>
+                        <td>${record.quantity}</td>
+                        <td>${price.toFixed(2)}</td>
+                        <td>${amount.toFixed(2)}</td>
+                        <td>${record.department}</td>
+                        <td>${record.transferTo || '-'}</td>
+                        <td>${record.notes || '-'}</td>
+                    `;
+                    
+                    historyBody.appendChild(row);
+                });
+            },
+            
+            // 渲染品类管理表格
+            renderCategoryTable() {
+                const categoryBody = document.getElementById('category-body');
+                categoryBody.innerHTML = '';
+                
+                const searchTerm = document.getElementById('category-search').value.toLowerCase();
+                
+                let hasData = false;
+                
+                for (const category in DataManager.categoryConfig) {
+                    // 搜索过滤
+                    if (searchTerm && !category.toLowerCase().includes(searchTerm)) {
+                        continue;
+                    }
+                    
+                    hasData = true;
+                    const config = DataManager.categoryConfig[category];
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${category}</td>
+                        <td>${config.unit}</td>
+                        <td>
+                            <input type="number" class="price-input" value="${config.defaultPrice}" 
+                                   data-category="${category}" min="0" step="0.01">
+                        </td>
+                        <td class="action-buttons">
+                            <button class="btn btn-warning edit-category-btn" data-category="${category}">编辑</button>
+                            <button class="btn btn-danger delete-category-btn" data-category="${category}">删除</button>
+                        </td>
+                    `;
+                    
+                    categoryBody.appendChild(row);
+                }
+                
+                // 如果没有数据，显示提示
+                if (!hasData) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="4" style="text-align: center;">${searchTerm ? '没有找到匹配的品类' : '暂无品类数据，请先添加品类'}</td>`;
+                    categoryBody.appendChild(row);
+                }
+            },
+            
+            // 更新品类单价
+            updateCategoryPrice(category, newPrice) {
+                newPrice = parseFloat(newPrice);
+                
+                if (isNaN(newPrice) || newPrice < 0) {
+                    alert('请输入有效的单价！');
+                    this.renderCategoryTable();
+                    return;
+                }
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 更新品类配置
+                DataManager.categoryConfig[category].defaultPrice = newPrice;
+                
+                // 更新所有部门的该品类价格
+                for (const department in DataManager.inventoryData) {
+                    if (DataManager.inventoryData[department][category]) {
+                        DataManager.inventoryData[department][category].currentPrice = newPrice;
+                    }
+                }
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderInventoryTable();
+                this.renderDashboard();
+                
+                alert(`品类"${category}"的单价已更新为${newPrice.toFixed(2)}元！`);
+            },
+            
+            // 渲染部门管理表格
+            renderDepartmentTable() {
+                const departmentBody = document.getElementById('department-body');
+                departmentBody.innerHTML = '';
+                
+                const searchTerm = document.getElementById('department-search').value.toLowerCase();
+                
+                let hasData = false;
+                
+                for (const department in DataManager.departmentConfig) {
+                    // 搜索过滤
+                    if (searchTerm && !department.toLowerCase().includes(searchTerm)) {
+                        continue;
+                    }
+                    
+                    hasData = true;
+                    
+                    // 计算该部门的总进货量
+                    let totalPurchase = 0;
+                    if (DataManager.inventoryData[department]) {
+                        for (const category in DataManager.inventoryData[department]) {
+                            totalPurchase += DataManager.inventoryData[department][category].purchase;
+                        }
+                    }
+                    
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${department}</td>
+                        <td>${totalPurchase}</td>
+                        <td class="action-buttons">
+                            <button class="btn btn-warning edit-department-btn" data-department="${department}">编辑</button>
+                            <button class="btn btn-danger delete-department-btn" data-department="${department}">删除</button>
+                            <button class="btn btn-info view-dept-history-btn" data-department="${department}">查看记录</button>
+                        </td>
+                    `;
+                    
+                    departmentBody.appendChild(row);
+                }
+                
+                // 如果没有数据，显示提示
+                if (!hasData) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="3" style="text-align: center;">${searchTerm ? '没有找到匹配的部门' : '暂无部门数据，请先添加部门'}</td>`;
+                    departmentBody.appendChild(row);
+                }
+            },
+            
+            // 查看部门操作记录
+            viewDepartmentHistory(department) {
+                const startDate = document.getElementById('dept-start-date').value;
+                const endDate = document.getElementById('dept-end-date').value;
+                
+                const deptHistory = DataManager.getDepartmentHistory(department, startDate, endDate);
+                const deptHistoryBody = document.getElementById('dept-history-body');
+                const deptHistorySection = document.getElementById('dept-history-section');
+                const deptHistoryTitle = document.getElementById('dept-history-title');
+                
+                deptHistoryBody.innerHTML = '';
+                deptHistoryTitle.textContent = `${department} - 操作记录 (${startDate || '开始'} 至 ${endDate || '结束'})`;
+                
+                if (deptHistory.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="8" style="text-align: center;">该部门在指定日期范围内没有操作记录</td>`;
+                    deptHistoryBody.appendChild(row);
+                } else {
+                    deptHistory.forEach(record => {
+                        const row = document.createElement('tr');
+                        
+                        // 格式化操作类型显示
+                        let typeDisplay = '';
+                        let typeClass = '';
+                        switch (record.type) {
+                            case 'in': 
+                                typeDisplay = '进货';
+                                typeClass = 'operation-in';
+                                break;
+                            case 'out': 
+                                typeDisplay = '消耗';
+                                typeClass = 'operation-out';
+                                break;
+                            case 'transfer': 
+                                typeDisplay = '调拨';
+                                typeClass = 'operation-transfer';
+                                break;
+                        }
+                        
+                        const price = record.price || DataManager.categoryConfig[record.category]?.defaultPrice || 0;
+                        const amount = record.quantity * price;
+                        
+                        // 判断是调拨入还是调拨出
+                        let transferDirection = '-';
+                        if (record.type === 'transfer') {
+                            transferDirection = record.department === department ? `调拨到 ${record.transferTo}` : `从 ${record.department} 调拨`;
+                        }
+                        
+                        row.innerHTML = `
+                            <td>${record.date}</td>
+                            <td>${record.category}</td>
+                            <td class="${typeClass}">${typeDisplay}</td>
+                            <td>${record.quantity}</td>
+                            <td>${price.toFixed(2)}</td>
+                            <td>${amount.toFixed(2)}</td>
+                            <td>${transferDirection}</td>
+                            <td>${record.notes || '-'}</td>
+                        `;
+                        
+                        deptHistoryBody.appendChild(row);
+                    });
+                }
+                
+                deptHistorySection.style.display = 'block';
+                deptHistorySection.scrollIntoView({ behavior: 'smooth' });
+            },
+            
+            // 筛选部门操作记录
+            filterDepartmentHistory() {
+                const searchTerm = document.getElementById('department-search').value.toLowerCase();
+                
+                // 如果有搜索词，先执行部门搜索
+                if (searchTerm) {
+                    this.searchDepartment();
+                }
+                
+                // 显示提示信息
+                alert('请点击部门行中的"查看记录"按钮查看该部门的详细操作记录');
+            },
+            
+            // 渲染仪表盘
+            renderDashboard() {
+                const stats = DataManager.getDashboardStats();
+                
+                // 更新仪表盘卡片
+                document.getElementById('total-categories').textContent = stats.totalCategories;
+                document.getElementById('total-amount').textContent = `¥${stats.totalAmount.toFixed(2)}`;
+                document.getElementById('low-stock-count').textContent = stats.lowStockCount;
+                document.getElementById('monthly-purchase').textContent = stats.monthlyPurchase;
+                
+                // 更新部门统计
+                this.renderDeptStats();
+                
+                // 更新库存预警列表
+                this.renderStockAlerts();
+            },
+            
+            // 渲染部门统计
+            renderDeptStats() {
+                const deptStatsContainer = document.getElementById('dashboard-dept-stats');
+                deptStatsContainer.innerHTML = '';
+                
+                for (const department in DataManager.departmentConfig) {
+                    const card = document.createElement('div');
+                    card.className = 'dept-stat-card';
+                    
+                    // 计算该部门的库存金额
+                    let deptAmount = 0;
+                    if (DataManager.inventoryData[department]) {
+                        for (const category in DataManager.inventoryData[department]) {
+                            const item = DataManager.inventoryData[department][category];
+                            const stock = item.purchase - item.consume;
+                            deptAmount += stock * item.currentPrice;
+                        }
+                    }
+                    
+                    card.innerHTML = `
+                        <h3>${department}</h3>
+                        <div class="dept-stat-value">¥${deptAmount.toFixed(2)}</div>
+                    `;
+                    
+                    deptStatsContainer.appendChild(card);
+                }
+            },
+            
+            // 渲染库存预警列表
+            renderStockAlerts() {
+                const alertBody = document.getElementById('alert-body');
+                alertBody.innerHTML = '';
+                
+                const alerts = DataManager.getStockAlerts();
+                
+                if (alerts.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="4" style="text-align: center;">暂无库存预警</td>`;
+                    alertBody.appendChild(row);
+                    return;
+                }
+                
+                alerts.forEach(alert => {
+                    const row = document.createElement('tr');
+                    
+                    let levelDisplay = '';
+                    if (alert.level === 'high') {
+                        levelDisplay = '<span class="alert-badge alert-high">缺货</span>';
+                    } else if (alert.level === 'medium') {
+                        levelDisplay = '<span class="alert-badge alert-medium">库存低</span>';
+                    }
+                    
+                    row.innerHTML = `
+                        <td>${alert.category}</td>
+                        <td>${alert.department}</td>
+                        <td>${alert.stock}</td>
+                        <td>${levelDisplay}</td>
+                    `;
+                    
+                    alertBody.appendChild(row);
+                });
+            },
+            
+            // 生成自定义日期报表
+            generateCustomReport() {
+                const reportBody = document.getElementById('monthly-report-body');
+                reportBody.innerHTML = '';
+                
+                const startDate = document.getElementById('report-start-date').value;
+                const endDate = document.getElementById('report-end-date').value;
+                const categoryFilter = document.getElementById('report-category').value;
+                
+                if (!startDate || !endDate) {
+                    alert('请选择开始日期和结束日期！');
+                    return;
+                }
+                
+                const reportData = DataManager.getCustomDateReport(startDate, endDate, categoryFilter);
+                
+                if (reportData.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td colspan="12" style="text-align: center;">指定日期范围内没有找到相关数据</td>`;
+                    reportBody.appendChild(row);
+                    return;
+                }
+                
+                reportData.forEach(data => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${data.department}</td>
+                        <td>${data.category}</td>
+                        <td>${data.purchaseQuantity}</td>
+                        <td>${data.purchaseAmount.toFixed(2)}</td>
+                        <td>${data.transferInQuantity}</td>
+                        <td>${data.transferInAmount.toFixed(2)}</td>
+                        <td>${data.transferOutQuantity}</td>
+                        <td>${data.transferOutAmount.toFixed(2)}</td>
+                        <td>${data.consumeQuantity}</td>
+                        <td>${data.consumeAmount.toFixed(2)}</td>
+                        <td>${data.netQuantity}</td>
+                        <td>${data.netAmount.toFixed(2)}</td>
+                    `;
+                    
+                    reportBody.appendChild(row);
+                });
+            },
+            
+            // 导出报表为Excel
+            exportReportExcel() {
+                const startDate = document.getElementById('report-start-date').value;
+                const endDate = document.getElementById('report-end-date').value;
+                const categoryFilter = document.getElementById('report-category').value;
+                
+                if (!startDate || !endDate) {
+                    alert('请选择开始日期和结束日期！');
+                    return;
+                }
+                
+                const reportData = DataManager.getCustomDateReport(startDate, endDate, categoryFilter);
+                
+                if (reportData.length === 0) {
+                    alert('没有数据可导出！');
+                    return;
+                }
+                
+                // 创建CSV格式的数据
+                let csvContent = "部门,品类,进货总量,进货总金额(元),调拨入总量,调拨入金额(元),调拨出总量,调拨出金额(元),消耗总量,消耗总金额(元),净进货量,净金额(元)\n";
+                
+                reportData.forEach(data => {
+                    csvContent += `"${data.department}","${data.category}",${data.purchaseQuantity},${data.purchaseAmount.toFixed(2)},${data.transferInQuantity},${data.transferInAmount.toFixed(2)},${data.transferOutQuantity},${data.transferOutAmount.toFixed(2)},${data.consumeQuantity},${data.consumeAmount.toFixed(2)},${data.netQuantity},${data.netAmount.toFixed(2)}\n`;
+                });
+                
+                // 创建下载链接
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `库存报表_${startDate}_至_${endDate}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                document.getElementById('backup-status').textContent = `报表已导出 (${new Date().toLocaleString()})`;
+            },
+            
+            // 保存操作
+            saveOperation() {
+                const category = document.getElementById('category').value;
+                const quantity = parseInt(document.getElementById('quantity').value);
+                const operationType = document.getElementById('operation-type').value;
+                const department = document.getElementById('department').value;
+                const transferTo = document.getElementById('transfer-to').value;
+                const date = document.getElementById('date').value;
+                const notes = document.getElementById('notes').value;
+                
+                // 验证输入
+                if (!category || !quantity || quantity <= 0 || !department || !date) {
+                    alert('请填写完整且有效的操作信息！');
+                    return;
+                }
+                
+                // 检查日期是否超过当前日期
+                const today = new Date().toISOString().split('T')[0];
+                if (date > today) {
+                    alert('操作日期不能超过当前日期！');
+                    return;
+                }
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 创建操作记录
+                const operationRecord = {
+                    category,
+                    quantity,
+                    type: operationType,
+                    department,
+                    date,
+                    notes
+                };
+                
+                // 处理不同类型的操作
+                switch (operationType) {
+                    case 'in': // 进货
+                        // 更新库存数据
+                        if (!DataManager.inventoryData[department][category]) {
+                            DataManager.inventoryData[department][category] = {
+                                unit: DataManager.categoryConfig[category].unit,
+                                purchase: 0,
+                                consume: 0,
+                                stock: 0,
+                                currentPrice: DataManager.categoryConfig[category].defaultPrice || 0,
+                                totalAmount: 0
+                            };
+                        }
+                        
+                        DataManager.inventoryData[department][category].purchase += quantity;
+                        break;
+                        
+                    case 'out': // 消耗
+                        // 检查库存是否足够
+                        if (!DataManager.inventoryData[department][category] || 
+                            (DataManager.inventoryData[department][category].purchase - 
+                             DataManager.inventoryData[department][category].consume) < quantity) {
+                            alert('库存不足，无法完成消耗操作！');
+                            return;
+                        }
+                        
+                        DataManager.inventoryData[department][category].consume += quantity;
+                        break;
+                        
+                    case 'transfer': // 调拨
+                        if (!transferTo) {
+                            alert('请选择调拨目标部门！');
+                            return;
+                        }
+                        
+                        if (department === transferTo) {
+                            alert('调拨源部门和目标部门不能相同！');
+                            return;
+                        }
+                        
+                        // 检查库存是否足够
+                        if (!DataManager.inventoryData[department][category] || 
+                            (DataManager.inventoryData[department][category].purchase - 
+                             DataManager.inventoryData[department][category].consume) < quantity) {
+                            alert('库存不足，无法完成调拨操作！');
+                            return;
+                        }
+                        
+                        // 更新源部门库存
+                        DataManager.inventoryData[department][category].consume += quantity;
+                        
+                        // 更新目标部门库存
+                        if (!DataManager.inventoryData[transferTo][category]) {
+                            DataManager.inventoryData[transferTo][category] = {
+                                unit: DataManager.categoryConfig[category].unit,
+                                purchase: 0,
+                                consume: 0,
+                                stock: 0,
+                                currentPrice: DataManager.categoryConfig[category].defaultPrice || 0,
+                                totalAmount: 0
+                            };
+                        }
+                        
+                        DataManager.inventoryData[transferTo][category].purchase += quantity;
+                        
+                        // 添加调拨目标部门到操作记录
+                        operationRecord.transferTo = transferTo;
+                        break;
+                }
+                
+                // 保存操作记录
+                DataManager.operationHistory.push(operationRecord);
+                
+                // 保存所有数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderInventoryTable();
+                this.renderOperationHistory();
+                this.renderDashboard();
+                this.renderDepartmentTable();
+                
+                // 重置表单
+                document.getElementById('quantity').value = '';
+                document.getElementById('notes').value = '';
+                
+                alert('操作已保存！');
+            },
+            
+            // 撤销上一次操作
+            undoLastOperation() {
+                if (DataManager.historyStack.length === 0) {
+                    alert('没有可撤销的操作！');
+                    return;
+                }
+                
+                // 从历史堆栈中恢复上一个状态
+                const lastState = DataManager.historyStack.pop();
+                
+                DataManager.inventoryData = lastState.inventoryData;
+                DataManager.departmentConfig = lastState.departmentConfig;
+                DataManager.operationHistory = lastState.operationHistory;
+                DataManager.categoryConfig = lastState.categoryConfig;
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderAll();
+                
+                alert('已撤销上一次操作！');
+            },
+            
+            // 添加品类
+            addCategory() {
+                const name = document.getElementById('new-category-name').value.trim();
+                const unit = document.getElementById('new-category-unit').value.trim();
+                const price = parseFloat(document.getElementById('new-category-price').value);
+                
+                if (!name || !unit || isNaN(price) || price < 0) {
+                    alert('请填写完整且有效的品类信息！');
+                    return;
+                }
+                
+                if (DataManager.categoryConfig[name]) {
+                    alert('该品类已存在！');
+                    return;
+                }
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 添加品类
+                DataManager.categoryConfig[name] = {
+                    unit,
+                    defaultPrice: price
+                };
+                
+                // 为每个部门初始化该品类的库存数据
+                for (const department in DataManager.departmentConfig) {
+                    if (!DataManager.inventoryData[department]) {
+                        DataManager.inventoryData[department] = {};
+                    }
+                    
+                    DataManager.inventoryData[department][name] = {
+                        unit,
+                        purchase: 0,
+                        consume: 0,
+                        stock: 0,
+                        currentPrice: price,
+                        totalAmount: 0
+                    };
+                }
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderCategorySelects();
+                this.renderCategoryTable();
+                this.renderInventoryTable();
+                
+                // 重置表单
+                document.getElementById('new-category-name').value = '';
+                document.getElementById('new-category-unit').value = '';
+                document.getElementById('new-category-price').value = '';
+                
+                alert('品类已添加！');
+            },
+            
+            // 编辑品类
+            editCategory(category) {
+                const newName = prompt(`请输入新的品类名称（当前：${category}）:`, category);
+                if (!newName || newName.trim() === '') return;
+                
+                const newUnit = prompt(`请输入新的单位（当前：${DataManager.categoryConfig[category].unit}）:`, DataManager.categoryConfig[category].unit);
+                if (!newUnit || newUnit.trim() === '') return;
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 更新品类配置
+                if (newName !== category) {
+                    // 品类名称改变，需要更新所有相关数据
+                    delete DataManager.categoryConfig[category];
+                    
+                    // 更新库存数据中的品类名称
+                    for (const department in DataManager.inventoryData) {
+                        if (DataManager.inventoryData[department][category]) {
+                            DataManager.inventoryData[department][newName] = DataManager.inventoryData[department][category];
+                            delete DataManager.inventoryData[department][category];
+                        }
+                    }
+                    
+                    // 更新操作记录中的品类名称
+                    DataManager.operationHistory.forEach(record => {
+                        if (record.category === category) {
+                            record.category = newName;
+                        }
+                    });
+                }
+                
+                // 更新品类配置
+                DataManager.categoryConfig[newName] = {
+                    unit: newUnit,
+                    defaultPrice: DataManager.categoryConfig[category]?.defaultPrice || 0
+                };
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderCategorySelects();
+                this.renderCategoryTable();
+                this.renderInventoryTable();
+                this.renderOperationHistory();
+                
+                alert('品类已更新！');
+            },
+            
+            // 删除品类
+            deleteCategory(category) {
+                if (!confirm(`确定要删除品类"${category}"吗？此操作不可撤销！`)) {
+                    return;
+                }
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 删除品类配置
+                delete DataManager.categoryConfig[category];
+                
+                // 从所有部门中删除该品类
+                for (const department in DataManager.inventoryData) {
+                    if (DataManager.inventoryData[department][category]) {
+                        delete DataManager.inventoryData[department][category];
+                    }
+                }
+                
+                // 从操作记录中过滤掉该品类的记录
+                DataManager.operationHistory = DataManager.operationHistory.filter(record => record.category !== category);
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderCategorySelects();
+                this.renderCategoryTable();
+                this.renderInventoryTable();
+                
+                alert('品类已删除！');
+            },
+            
+            // 添加部门
+            addDepartment() {
+                const name = document.getElementById('new-department-name').value.trim();
+                
+                if (!name) {
+                    alert('请输入部门名称！');
+                    return;
+                }
+                
+                if (DataManager.departmentConfig[name]) {
+                    alert('该部门已存在！');
+                    return;
+                }
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 添加部门
+                DataManager.departmentConfig[name] = 0;
+                
+                // 初始化该部门的库存数据
+                DataManager.inventoryData[name] = {};
+                for (const category in DataManager.categoryConfig) {
+                    DataManager.inventoryData[name][category] = {
+                        unit: DataManager.categoryConfig[category].unit,
+                        purchase: 0,
+                        consume: 0,
+                        stock: 0,
+                        currentPrice: DataManager.categoryConfig[category].defaultPrice || 0,
+                        totalAmount: 0
+                    };
+                }
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderDepartmentSelect();
+                this.renderDepartmentTable();
+                this.renderDashboard();
+                
+                // 重置表单
+                document.getElementById('new-department-name').value = '';
+                
+                alert('部门已添加！');
+            },
+            
+            // 编辑部门
+            editDepartment(department) {
+                const newName = prompt(`请输入新的部门名称（当前：${department}）:`, department);
+                if (!newName || newName.trim() === '') return;
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 更新部门配置
+                if (newName !== department) {
+                    // 部门名称改变，需要更新所有相关数据
+                    DataManager.departmentConfig[newName] = DataManager.departmentConfig[department];
+                    delete DataManager.departmentConfig[department];
+                    
+                    // 更新库存数据中的部门名称
+                    DataManager.inventoryData[newName] = DataManager.inventoryData[department];
+                    delete DataManager.inventoryData[department];
+                    
+                    // 更新操作记录中的部门名称
+                    DataManager.operationHistory.forEach(record => {
+                        if (record.department === department) {
+                            record.department = newName;
+                        }
+                        if (record.transferTo === department) {
+                            record.transferTo = newName;
+                        }
+                    });
+                }
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderDepartmentSelect();
+                this.renderDepartmentTable();
+                this.renderInventoryTable();
+                this.renderOperationHistory();
+                this.renderDashboard();
+                
+                alert('部门已更新！');
+            },
+            
+            // 删除部门
+            deleteDepartment(department) {
+                if (!confirm(`确定要删除部门"${department}"吗？此操作不可撤销！`)) {
+                    return;
+                }
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 删除部门配置
+                delete DataManager.departmentConfig[department];
+                
+                // 删除库存数据中的部门
+                delete DataManager.inventoryData[department];
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderDepartmentSelect();
+                this.renderDepartmentTable();
+                this.renderDashboard();
+                
+                alert('部门已删除！');
+            },
+            
+            // 搜索库存
+            searchInventory() {
+                this.renderInventoryTable();
+            },
+            
+            // 搜索历史记录
+            searchHistory() {
+                this.renderOperationHistory();
+            },
+            
+            // 搜索品类
+            searchCategory() {
+                this.renderCategoryTable();
+            },
+            
+            // 搜索部门
+            searchDepartment() {
+                this.renderDepartmentTable();
+            },
+            
+            // 重置库存搜索
+            resetInventorySearch() {
+                document.getElementById('inventory-search').value = '';
+                this.renderInventoryTable();
+            },
+            
+            // 重置历史搜索
+            resetHistorySearch() {
+                document.getElementById('history-search').value = '';
+                document.getElementById('history-operation-type').value = 'all';
+                this.setupDefaultDates(); // 重置日期为默认值
+                this.renderOperationHistory();
+            },
+            
+            // 重置品类搜索
+            resetCategorySearch() {
+                document.getElementById('category-search').value = '';
+                this.renderCategoryTable();
+            },
+            
+            // 重置部门搜索
+            resetDepartmentSearch() {
+                document.getElementById('department-search').value = '';
+                this.setupDefaultDates(); // 重置日期为默认值
+                this.renderDepartmentTable();
+                document.getElementById('dept-history-section').style.display = 'none';
+            },
+            
+            // 导出数据
+            exportData() {
+                const data = {
+                    categoryConfig: DataManager.categoryConfig,
+                    inventoryData: DataManager.inventoryData,
+                    departmentConfig: DataManager.departmentConfig,
+                    operationHistory: DataManager.operationHistory,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(data, null, 2);
+                const dataBlob = new Blob([dataStr], {type: 'application/json'});
+                
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `库存数据备份_${new Date().toISOString().slice(0, 10)}.json`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                document.getElementById('backup-status').textContent = `数据已导出 (${new Date().toLocaleString()})`;
+            },
+            
+            // 导入数据
+            importData() {
+                const fileInput = document.getElementById('data-file');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    alert('请选择备份文件！');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        if (!data.categoryConfig || !data.inventoryData || !data.departmentConfig || !data.operationHistory) {
+                            alert('文件格式不正确！');
+                            return;
+                        }
+                        
+                        if (!confirm('导入数据将覆盖当前所有数据，确定要继续吗？')) {
+                            return;
+                        }
+                        
+                        // 保存当前状态到历史堆栈
+                        DataManager.saveStateToHistory();
+                        
+                        // 导入数据
+                        DataManager.categoryConfig = data.categoryConfig;
+                        DataManager.inventoryData = data.inventoryData;
+                        DataManager.departmentConfig = data.departmentConfig;
+                        DataManager.operationHistory = data.operationHistory;
+                        
+                        // 保存数据
+                        DataManager.saveAllData();
+                        
+                        // 更新UI
+                        this.renderAll();
+                        
+                        document.getElementById('backup-status').textContent = `数据已导入 (${new Date().toLocaleString()})`;
+                        alert('数据导入成功！');
+                    } catch (error) {
+                        alert('文件读取失败，请检查文件格式！');
+                        console.error(error);
+                    }
+                };
+                
+                reader.readAsText(file);
+            },
+            
+            // 打印报表
+            printReport() {
+                window.print();
+            },
+            
+            // 快速导出Excel
+            quickExportExcel() {
+                // 创建CSV格式的数据
+                let csvContent = "品类,单位,部门,进货量,消耗量,库存量,单价,库存金额\n";
+                
+                for (const department in DataManager.inventoryData) {
+                    for (const category in DataManager.inventoryData[department]) {
+                        const item = DataManager.inventoryData[department][category];
+                        const stock = item.purchase - item.consume;
+                        const stockAmount = stock * item.currentPrice;
+                        
+                        csvContent += `"${category}","${item.unit}","${department}",${item.purchase},${item.consume},${stock},${item.currentPrice},${stockAmount}\n`;
+                    }
+                }
+                
+                // 创建下载链接
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `库存数据_${new Date().toISOString().slice(0, 10)}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                document.getElementById('backup-status').textContent = `Excel数据已导出 (${new Date().toLocaleString()})`;
+            }
+        };
+
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            UIManager.initializeUI();
+        });
+    </script>
+</body>
+</html>
