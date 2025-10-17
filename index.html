@@ -1190,7 +1190,7 @@
                 <div class="module" id="export-module">
                     <div class="section">
                         <h2>数据导出与备份</h2>
-                        <p>为确保数据安全，请定期导出数据备份。</p>
+                        <p>为确保数据安全，请定期导出数据备份.</p>
 
                         <div class="export-buttons">
                             <button class="btn btn-primary" id="export-data-btn">
@@ -1604,14 +1604,6 @@
             currentInventoryDept:
                 Object.keys(DataManager.departmentConfig)[0] || "",
 
-            // 拖拽相关变量
-            dragSrcEl: null,
-            draggedItem: null,
-            touchStartY: 0,
-            originalIndex: 0,
-            longPressTimer: null,
-            isDragging: false,
-
             // 初始化UI
             initializeUI() {
                 // 先初始化数据
@@ -1897,7 +1889,7 @@
                 });
             },
 
-            // 设置拖拽排序功能 - 完全重写的移动端版本
+            // 设置拖拽排序功能 - 完全重写的版本
             setupDragAndDrop() {
                 // 为品类管理表格设置拖拽
                 this.setupDragForContainer(document.getElementById("category-body"));
@@ -1906,14 +1898,16 @@
                 this.setupDragForContainer(document.getElementById("inventory-body"));
             },
 
-            // 为指定容器设置拖拽功能 - 修复移动端版本
+            // 为指定容器设置拖拽功能 - 完全重写的移动端版本
             setupDragForContainer(container) {
                 if (!container) return;
 
                 let draggedItem = null;
                 let startIndex = 0;
+                let touchStartY = 0;
                 let currentY = 0;
                 let longPressTimer = null;
+                let isDragging = false;
 
                 // 桌面端拖拽事件
                 container.addEventListener('dragstart', (e) => {
@@ -1957,41 +1951,39 @@
                 // 移动端触摸事件 - 完全重写
                 container.addEventListener('touchstart', (e) => {
                     const item = e.target.closest('.sortable-item');
-                    if (!item) return;
+                    if (!item || isDragging) return;
 
-                    // 阻止默认行为防止页面滚动
-                    e.preventDefault();
-                    
+                    touchStartY = e.touches[0].clientY;
                     draggedItem = item;
                     startIndex = Array.from(container.children).indexOf(draggedItem);
-                    currentY = e.touches[0].clientY;
 
                     // 设置长按计时器
                     longPressTimer = setTimeout(() => {
+                        isDragging = true;
                         draggedItem.classList.add('dragging');
                         draggedItem.style.transition = 'none';
+                        
+                        // 添加视觉反馈
+                        document.body.style.userSelect = 'none';
                     }, 500);
-                }, { passive: false });
+                });
 
                 container.addEventListener('touchmove', (e) => {
-                    if (!draggedItem || !draggedItem.classList.contains('dragging')) return;
+                    if (!isDragging || !draggedItem) return;
                     
                     e.preventDefault();
-                    const touch = e.touches[0];
-                    const deltaY = touch.clientY - currentY;
+                    currentY = e.touches[0].clientY;
+                    const deltaY = currentY - touchStartY;
                     
                     // 移动元素
                     draggedItem.style.transform = `translateY(${deltaY}px)`;
                     
-                    // 更新其他元素位置
+                    // 计算新的位置
                     const items = Array.from(container.querySelectorAll('.sortable-item:not(.dragging)'));
                     const draggedRect = draggedItem.getBoundingClientRect();
                     const draggedCenter = draggedRect.top + draggedRect.height / 2;
                     
-                    // 移除所有over类
-                    items.forEach(item => item.classList.remove('over'));
-                    
-                    let swapIndex = -1;
+                    let newIndex = startIndex;
                     
                     for (let i = 0; i < items.length; i++) {
                         const item = items[i];
@@ -1999,23 +1991,24 @@
                         const center = rect.top + rect.height / 2;
                         
                         if (draggedCenter > center) {
-                            item.classList.add('over');
-                            swapIndex = i;
+                            newIndex = i + 1;
+                        } else {
+                            break;
                         }
                     }
                     
-                    // 如果有需要交换的位置，执行交换
-                    if (swapIndex !== -1) {
-                        const currentIndex = Array.from(container.children).indexOf(draggedItem);
-                        if (currentIndex !== swapIndex && currentIndex !== swapIndex + 1) {
-                            if (swapIndex < currentIndex) {
-                                container.insertBefore(draggedItem, items[swapIndex]);
-                            } else {
-                                container.insertBefore(draggedItem, items[swapIndex].nextSibling);
-                            }
+                    // 更新位置
+                    if (newIndex !== startIndex) {
+                        const allItems = Array.from(container.children);
+                        const currentIndex = allItems.indexOf(draggedItem);
+                        
+                        if (newIndex > currentIndex) {
+                            container.insertBefore(draggedItem, allItems[newIndex + 1]);
+                        } else {
+                            container.insertBefore(draggedItem, allItems[newIndex]);
                         }
                     }
-                }, { passive: false });
+                });
 
                 container.addEventListener('touchend', (e) => {
                     // 清除长按计时器
@@ -2024,16 +2017,15 @@
                         longPressTimer = null;
                     }
                     
-                    if (!draggedItem) return;
+                    if (!isDragging || !draggedItem) return;
+                    
+                    e.preventDefault();
                     
                     // 重置样式
                     draggedItem.style.transform = '';
                     draggedItem.style.transition = '';
                     draggedItem.classList.remove('dragging');
-                    
-                    // 移除所有over类
-                    const items = Array.from(container.querySelectorAll('.sortable-item'));
-                    items.forEach(item => item.classList.remove('over'));
+                    document.body.style.userSelect = '';
                     
                     // 检查位置是否改变
                     const endIndex = Array.from(container.children).indexOf(draggedItem);
@@ -2041,6 +2033,7 @@
                         this.showSaveButton(container.id);
                     }
                     
+                    isDragging = false;
                     draggedItem = null;
                 });
 
@@ -2050,10 +2043,12 @@
                         clearTimeout(longPressTimer);
                         longPressTimer = null;
                     }
-                    if (draggedItem) {
+                    if (draggedItem && isDragging) {
                         draggedItem.style.transform = '';
                         draggedItem.style.transition = '';
                         draggedItem.classList.remove('dragging');
+                        document.body.style.userSelect = '';
+                        isDragging = false;
                         draggedItem = null;
                     }
                 });
