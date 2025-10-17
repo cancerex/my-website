@@ -1897,7 +1897,7 @@
                 });
             },
 
-            // 设置拖拽排序功能 - 修复版本
+            // 设置拖拽排序功能 - 完全重写的移动端版本
             setupDragAndDrop() {
                 // 为品类管理表格设置拖拽
                 this.setupDragForContainer(document.getElementById("category-body"));
@@ -1906,21 +1906,22 @@
                 this.setupDragForContainer(document.getElementById("inventory-body"));
             },
 
-            // 为指定容器设置拖拽功能 - 修复版本
+            // 为指定容器设置拖拽功能 - 修复移动端版本
             setupDragForContainer(container) {
                 if (!container) return;
 
                 let draggedItem = null;
-                let dragStartIndex = 0;
+                let startIndex = 0;
+                let currentY = 0;
+                let longPressTimer = null;
 
                 // 桌面端拖拽事件
                 container.addEventListener('dragstart', (e) => {
                     if (e.target.classList.contains('sortable-item') || e.target.closest('.sortable-item')) {
                         draggedItem = e.target.classList.contains('sortable-item') ? e.target : e.target.closest('.sortable-item');
-                        dragStartIndex = Array.from(container.children).indexOf(draggedItem);
+                        startIndex = Array.from(container.children).indexOf(draggedItem);
                         draggedItem.classList.add('dragging');
                         
-                        // 设置拖拽图像
                         e.dataTransfer.effectAllowed = 'move';
                         e.dataTransfer.setData('text/plain', draggedItem.getAttribute('data-category'));
                     }
@@ -1945,47 +1946,39 @@
                     
                     draggedItem.classList.remove('dragging');
                     
-                    const dragEndIndex = Array.from(container.children).indexOf(draggedItem);
-                    if (dragStartIndex !== dragEndIndex) {
-                        // 显示保存按钮
-                        if (container.id === "category-body") {
-                            document.getElementById("save-category-order").style.display = "inline-block";
-                        } else if (container.id === "inventory-body") {
-                            document.getElementById("save-inventory-order").style.display = "inline-block";
-                        }
+                    const endIndex = Array.from(container.children).indexOf(draggedItem);
+                    if (startIndex !== endIndex) {
+                        this.showSaveButton(container.id);
                     }
                     
                     draggedItem = null;
                 });
 
-                // 移动端触摸事件
-                let touchStartY = 0;
-                let currentY = 0;
-                let longPressTimer = null;
-                let isDragging = false;
-
+                // 移动端触摸事件 - 完全重写
                 container.addEventListener('touchstart', (e) => {
                     const item = e.target.closest('.sortable-item');
-                    if (!item || isDragging) return;
+                    if (!item) return;
 
-                    touchStartY = e.touches[0].clientY;
+                    // 阻止默认行为防止页面滚动
+                    e.preventDefault();
+                    
                     draggedItem = item;
-                    dragStartIndex = Array.from(container.children).indexOf(draggedItem);
+                    startIndex = Array.from(container.children).indexOf(draggedItem);
+                    currentY = e.touches[0].clientY;
 
                     // 设置长按计时器
                     longPressTimer = setTimeout(() => {
-                        isDragging = true;
                         draggedItem.classList.add('dragging');
                         draggedItem.style.transition = 'none';
                     }, 500);
-                }, { passive: true });
+                }, { passive: false });
 
                 container.addEventListener('touchmove', (e) => {
-                    if (!isDragging || !draggedItem) return;
+                    if (!draggedItem || !draggedItem.classList.contains('dragging')) return;
                     
                     e.preventDefault();
-                    currentY = e.touches[0].clientY;
-                    const deltaY = currentY - touchStartY;
+                    const touch = e.touches[0];
+                    const deltaY = touch.clientY - currentY;
                     
                     // 移动元素
                     draggedItem.style.transform = `translateY(${deltaY}px)`;
@@ -1998,12 +1991,28 @@
                     // 移除所有over类
                     items.forEach(item => item.classList.remove('over'));
                     
-                    for (const item of items) {
+                    let swapIndex = -1;
+                    
+                    for (let i = 0; i < items.length; i++) {
+                        const item = items[i];
                         const rect = item.getBoundingClientRect();
                         const center = rect.top + rect.height / 2;
                         
                         if (draggedCenter > center) {
                             item.classList.add('over');
+                            swapIndex = i;
+                        }
+                    }
+                    
+                    // 如果有需要交换的位置，执行交换
+                    if (swapIndex !== -1) {
+                        const currentIndex = Array.from(container.children).indexOf(draggedItem);
+                        if (currentIndex !== swapIndex && currentIndex !== swapIndex + 1) {
+                            if (swapIndex < currentIndex) {
+                                container.insertBefore(draggedItem, items[swapIndex]);
+                            } else {
+                                container.insertBefore(draggedItem, items[swapIndex].nextSibling);
+                            }
                         }
                     }
                 }, { passive: false });
@@ -2015,39 +2024,7 @@
                         longPressTimer = null;
                     }
                     
-                    if (!isDragging || !draggedItem) {
-                        // 如果不是拖拽模式，允许正常点击
-                        const item = e.target.closest('.sortable-item');
-                        if (item && !isDragging) {
-                            this.handleItemClick(item);
-                        }
-                        return;
-                    }
-                    
-                    e.preventDefault();
-                    
-                    const items = Array.from(container.querySelectorAll('.sortable-item'));
-                    const draggedIndex = items.indexOf(draggedItem);
-                    
-                    // 找到应该插入的位置
-                    let targetIndex = draggedIndex;
-                    const draggedRect = draggedItem.getBoundingClientRect();
-                    const draggedCenter = draggedRect.top + draggedRect.height / 2;
-                    
-                    for (let i = 0; i < items.length; i++) {
-                        if (i === draggedIndex) continue;
-                        
-                        const item = items[i];
-                        const rect = item.getBoundingClientRect();
-                        const center = rect.top + rect.height / 2;
-                        
-                        if (draggedCenter > center && draggedIndex < i) {
-                            targetIndex = i;
-                        } else if (draggedCenter < center && draggedIndex > i) {
-                            targetIndex = i;
-                            break;
-                        }
-                    }
+                    if (!draggedItem) return;
                     
                     // 重置样式
                     draggedItem.style.transform = '';
@@ -2055,27 +2032,15 @@
                     draggedItem.classList.remove('dragging');
                     
                     // 移除所有over类
+                    const items = Array.from(container.querySelectorAll('.sortable-item'));
                     items.forEach(item => item.classList.remove('over'));
                     
-                    // 移动元素到新位置
-                    if (targetIndex !== dragStartIndex) {
-                        if (targetIndex === items.length - 1) {
-                            container.appendChild(draggedItem);
-                        } else if (targetIndex < draggedIndex) {
-                            container.insertBefore(draggedItem, items[targetIndex]);
-                        } else {
-                            container.insertBefore(draggedItem, items[targetIndex + 1]);
-                        }
-                        
-                        // 显示保存按钮
-                        if (container.id === "category-body") {
-                            document.getElementById("save-category-order").style.display = "inline-block";
-                        } else if (container.id === "inventory-body") {
-                            document.getElementById("save-inventory-order").style.display = "inline-block";
-                        }
+                    // 检查位置是否改变
+                    const endIndex = Array.from(container.children).indexOf(draggedItem);
+                    if (startIndex !== endIndex) {
+                        this.showSaveButton(container.id);
                     }
                     
-                    isDragging = false;
                     draggedItem = null;
                 });
 
@@ -2089,7 +2054,6 @@
                         draggedItem.style.transform = '';
                         draggedItem.style.transition = '';
                         draggedItem.classList.remove('dragging');
-                        isDragging = false;
                         draggedItem = null;
                     }
                 });
@@ -2111,10 +2075,13 @@
                 }, { offset: Number.NEGATIVE_INFINITY }).element;
             },
 
-            // 处理项目点击（非拖拽）
-            handleItemClick(item) {
-                // 这里可以添加点击项目的处理逻辑
-                console.log("项目被点击:", item.getAttribute("data-category"));
+            // 显示保存按钮
+            showSaveButton(containerId) {
+                if (containerId === "category-body") {
+                    document.getElementById("save-category-order").style.display = "inline-block";
+                } else if (containerId === "inventory-body") {
+                    document.getElementById("save-inventory-order").style.display = "inline-block";
+                }
             },
 
             // 保存品类排序
@@ -2573,7 +2540,7 @@
                 deptHistorySection.scrollIntoView({ behavior: "smooth" });
             },
 
-            // 渲染品类管理表格（支持拖拽排序）- 修复版本
+            // 渲染品类管理表格（支持拖拽排序）
             renderCategoryTable() {
                 const categoryBody = document.getElementById("category-body");
                 categoryBody.innerHTML = "";
