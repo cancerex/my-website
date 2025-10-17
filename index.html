@@ -424,6 +424,48 @@
             color: var(--warning-color);
         }
         
+        /* 搜索下拉框样式 */
+        .search-select-container {
+            position: relative;
+        }
+        
+        .search-select-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .search-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-select-option {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .search-select-option:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .search-select-option:last-child {
+            border-bottom: none;
+        }
+        
         /* 移动端优化 */
         @media (max-width: 768px) {
             body {
@@ -542,6 +584,10 @@
             .table-container {
                 margin-top: 8px;
             }
+            
+            .search-select-dropdown {
+                max-height: 150px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -562,8 +608,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>老奶奶面馆出入库管理系统beta</h1>
-            <p class="subtitle">自由管理进货、消耗与库存</p>
+            <h1>餐饮店调料库存管理系统</h1>
+            <p class="subtitle">轻松管理调料进货、消耗与库存</p>
         </header>
         
         <div class="main-content">
@@ -671,10 +717,14 @@
                     <div class="section">
                         <h2>库存操作</h2>
                         <div class="form-group">
-                            <label for="category">选择品类</label>
-                            <select id="category">
-                                <!-- 品类选项将通过JavaScript动态生成 -->
-                            </select>
+                            <label for="category-search">选择品类</label>
+                            <div class="search-select-container">
+                                <input type="text" id="category-search" class="search-select-input" placeholder="输入品类名称搜索...">
+                                <div class="search-select-dropdown" id="category-dropdown">
+                                    <!-- 品类选项将通过JavaScript动态生成 -->
+                                </div>
+                            </div>
+                            <input type="hidden" id="category" value="">
                         </div>
                         
                         <div class="form-group">
@@ -1384,6 +1434,9 @@
                 document.getElementById('print-report-btn').addEventListener('click', () => this.printReport());
                 document.getElementById('quick-export-btn').addEventListener('click', () => this.quickExportExcel());
                 
+                // 品类搜索下拉框事件
+                this.setupCategorySearch();
+                
                 // 为品类价格输入框添加事件委托
                 document.addEventListener('change', (e) => {
                     if (e.target.classList.contains('price-input')) {
@@ -1419,6 +1472,75 @@
                 });
             },
             
+            // 设置品类搜索下拉框
+            setupCategorySearch() {
+                const searchInput = document.getElementById('category-search');
+                const dropdown = document.getElementById('category-dropdown');
+                
+                // 输入时显示下拉框
+                searchInput.addEventListener('input', (e) => {
+                    const searchTerm = e.target.value.toLowerCase();
+                    this.renderCategoryDropdown(searchTerm);
+                    
+                    if (searchTerm) {
+                        dropdown.style.display = 'block';
+                    } else {
+                        dropdown.style.display = 'none';
+                    }
+                });
+                
+                // 点击输入框时显示所有品类
+                searchInput.addEventListener('focus', () => {
+                    this.renderCategoryDropdown('');
+                    dropdown.style.display = 'block';
+                });
+                
+                // 点击其他地方时隐藏下拉框
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.search-select-container')) {
+                        dropdown.style.display = 'none';
+                    }
+                });
+                
+                // 下拉框选项点击事件
+                dropdown.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('search-select-option')) {
+                        const category = e.target.getAttribute('data-value');
+                        searchInput.value = category;
+                        document.getElementById('category').value = category;
+                        dropdown.style.display = 'none';
+                    }
+                });
+            },
+            
+            // 渲染品类搜索下拉框
+            renderCategoryDropdown(searchTerm = '') {
+                const dropdown = document.getElementById('category-dropdown');
+                dropdown.innerHTML = '';
+                
+                let hasResults = false;
+                
+                for (const category in DataManager.categoryConfig) {
+                    if (searchTerm && !category.toLowerCase().includes(searchTerm)) {
+                        continue;
+                    }
+                    
+                    hasResults = true;
+                    const option = document.createElement('div');
+                    option.className = 'search-select-option';
+                    option.setAttribute('data-value', category);
+                    option.textContent = `${category}（${DataManager.categoryConfig[category].unit}）`;
+                    dropdown.appendChild(option);
+                }
+                
+                if (!hasResults) {
+                    const option = document.createElement('div');
+                    option.className = 'search-select-option';
+                    option.textContent = '没有找到匹配的品类';
+                    dropdown.appendChild(option);
+                }
+            },
+            
             // 渲染所有UI组件
             renderAll() {
                 this.renderCategorySelects();
@@ -1435,34 +1557,18 @@
             
             // 渲染品类下拉菜单
             renderCategorySelects() {
-                const categorySelect = document.getElementById('category');
                 const reportCategorySelect = document.getElementById('report-category');
                 
                 // 清空现有选项
-                categorySelect.innerHTML = '';
                 reportCategorySelect.innerHTML = '<option value="all">所有品类</option>';
                 
                 // 添加品类选项
                 for (const category in DataManager.categoryConfig) {
-                    // 操作界面的品类选择
-                    const option = document.createElement('option');
-                    option.value = category;
-                    option.textContent = `${category}（${DataManager.categoryConfig[category].unit}）`;
-                    categorySelect.appendChild(option);
-                    
                     // 自定义报表的品类选择
                     const reportOption = document.createElement('option');
                     reportOption.value = category;
                     reportOption.textContent = category;
                     reportCategorySelect.appendChild(reportOption);
-                }
-                
-                // 如果没有任何品类，添加提示
-                if (categorySelect.children.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = "";
-                    option.textContent = "请先添加品类";
-                    categorySelect.appendChild(option);
                 }
             },
             
@@ -1795,6 +1901,61 @@
                 this.renderDashboard();
                 
                 alert(`品类"${category}"的单价已更新为${newPrice.toFixed(2)}元！`);
+            },
+            
+            // 编辑品类
+            editCategory(category) {
+                const newName = prompt(`请输入新的品类名称（当前：${category}）:`, category);
+                if (!newName || newName.trim() === '') return;
+                
+                const newUnit = prompt(`请输入新的单位（当前：${DataManager.categoryConfig[category].unit}）:`, DataManager.categoryConfig[category].unit);
+                if (!newUnit || newUnit.trim() === '') return;
+                
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+                
+                // 更新品类配置
+                if (newName !== category) {
+                    // 品类名称改变，需要更新所有相关数据
+                    const oldConfig = DataManager.categoryConfig[category];
+                    delete DataManager.categoryConfig[category];
+                    
+                    // 更新库存数据中的品类名称
+                    for (const department in DataManager.inventoryData) {
+                        if (DataManager.inventoryData[department][category]) {
+                            DataManager.inventoryData[department][newName] = DataManager.inventoryData[department][category];
+                            delete DataManager.inventoryData[department][category];
+                        }
+                    }
+                    
+                    // 更新操作记录中的品类名称
+                    DataManager.operationHistory.forEach(record => {
+                        if (record.category === category) {
+                            record.category = newName;
+                        }
+                    });
+                    
+                    // 创建新的品类配置
+                    DataManager.categoryConfig[newName] = {
+                        unit: newUnit,
+                        defaultPrice: oldConfig.defaultPrice
+                    };
+                } else {
+                    // 只更新单位
+                    DataManager.categoryConfig[category].unit = newUnit;
+                }
+                
+                // 保存数据
+                DataManager.saveAllData();
+                
+                // 更新UI
+                this.renderCategorySelects();
+                this.renderCategoryTable();
+                this.renderInventoryTable();
+                this.renderOperationHistory();
+                this.renderCategoryDropdown(); // 更新搜索下拉框
+                
+                alert('品类已更新！');
             },
             
             // 渲染部门管理表格
@@ -2195,6 +2356,8 @@
                 // 重置表单
                 document.getElementById('quantity').value = '';
                 document.getElementById('notes').value = '';
+                document.getElementById('category-search').value = '';
+                document.getElementById('category').value = '';
                 
                 alert('操作已保存！');
             },
@@ -2271,6 +2434,7 @@
                 this.renderCategorySelects();
                 this.renderCategoryTable();
                 this.renderInventoryTable();
+                this.renderCategoryDropdown(); // 更新搜索下拉框
                 
                 // 重置表单
                 document.getElementById('new-category-name').value = '';
@@ -2278,56 +2442,6 @@
                 document.getElementById('new-category-price').value = '';
                 
                 alert('品类已添加！');
-            },
-            
-            // 编辑品类
-            editCategory(category) {
-                const newName = prompt(`请输入新的品类名称（当前：${category}）:`, category);
-                if (!newName || newName.trim() === '') return;
-                
-                const newUnit = prompt(`请输入新的单位（当前：${DataManager.categoryConfig[category].unit}）:`, DataManager.categoryConfig[category].unit);
-                if (!newUnit || newUnit.trim() === '') return;
-                
-                // 保存当前状态到历史堆栈
-                DataManager.saveStateToHistory();
-                
-                // 更新品类配置
-                if (newName !== category) {
-                    // 品类名称改变，需要更新所有相关数据
-                    delete DataManager.categoryConfig[category];
-                    
-                    // 更新库存数据中的品类名称
-                    for (const department in DataManager.inventoryData) {
-                        if (DataManager.inventoryData[department][category]) {
-                            DataManager.inventoryData[department][newName] = DataManager.inventoryData[department][category];
-                            delete DataManager.inventoryData[department][category];
-                        }
-                    }
-                    
-                    // 更新操作记录中的品类名称
-                    DataManager.operationHistory.forEach(record => {
-                        if (record.category === category) {
-                            record.category = newName;
-                        }
-                    });
-                }
-                
-                // 更新品类配置
-                DataManager.categoryConfig[newName] = {
-                    unit: newUnit,
-                    defaultPrice: DataManager.categoryConfig[category]?.defaultPrice || 0
-                };
-                
-                // 保存数据
-                DataManager.saveAllData();
-                
-                // 更新UI
-                this.renderCategorySelects();
-                this.renderCategoryTable();
-                this.renderInventoryTable();
-                this.renderOperationHistory();
-                
-                alert('品类已更新！');
             },
             
             // 删除品类
@@ -2359,6 +2473,7 @@
                 this.renderCategorySelects();
                 this.renderCategoryTable();
                 this.renderInventoryTable();
+                this.renderCategoryDropdown(); // 更新搜索下拉框
                 
                 alert('品类已删除！');
             },
