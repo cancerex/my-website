@@ -471,13 +471,14 @@
 
         /* 拖拽排序样式 */
         .sortable-item {
-            cursor: move;
+            cursor: pointer;
             transition: all 0.2s ease;
         }
 
         .sortable-item.dragging {
-            opacity: 0.5;
+            opacity: 0.7;
             background-color: #f8f9fa;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
 
         .sortable-item.over {
@@ -506,6 +507,29 @@
             border-radius: 12px;
             font-size: 0.7rem;
             font-weight: bold;
+        }
+
+        /* 长按提示样式 */
+        .long-press-hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            animation: fadeInOut 3s ease-in-out;
+            display: none;
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
         }
 
         /* 移动端优化 */
@@ -636,6 +660,11 @@
             .default-dept-container {
                 flex-direction: column;
                 align-items: flex-start;
+            }
+
+            /* 移动端长按提示 */
+            .long-press-hint {
+                display: block;
             }
         }
 
@@ -1207,6 +1236,11 @@
         </footer>
     </div>
 
+    <!-- 长按提示 -->
+    <div class="long-press-hint" id="long-press-hint">
+        长按项目可激活拖拽排序
+    </div>
+
     <script>
         // 数据管理模块
         const DataManager = {
@@ -1575,6 +1609,8 @@
             draggedItem: null,
             touchStartY: 0,
             originalIndex: 0,
+            longPressTimer: null,
+            isDragging: false,
 
             // 初始化UI
             initializeUI() {
@@ -1592,6 +1628,18 @@
 
                 // 渲染所有UI组件
                 this.renderAll();
+
+                // 显示长按提示
+                this.showLongPressHint();
+            },
+
+            // 显示长按提示
+            showLongPressHint() {
+                const hint = document.getElementById('long-press-hint');
+                hint.style.display = 'block';
+                setTimeout(() => {
+                    hint.style.display = 'none';
+                }, 3000);
             },
 
             // 设置默认日期
@@ -1858,141 +1906,132 @@
                 this.setupDragForContainer(document.getElementById("inventory-body"));
             },
 
-            // 为指定容器设置拖拽功能
+            // 为指定容器设置拖拽功能 - 修复版本
             setupDragForContainer(container) {
                 if (!container) return;
 
+                let draggedItem = null;
+                let dragStartIndex = 0;
+
                 // 桌面端拖拽事件
-                container.addEventListener("dragstart", (e) => {
-                    if (e.target.classList.contains("sortable-item") || e.target.closest(".sortable-item")) {
-                        const item = e.target.classList.contains("sortable-item") ? e.target : e.target.closest(".sortable-item");
-                        this.dragSrcEl = item;
-                        item.classList.add("dragging");
-                        e.dataTransfer.effectAllowed = "move";
-                        e.dataTransfer.setData("text/plain", item.getAttribute("data-category"));
+                container.addEventListener('dragstart', (e) => {
+                    if (e.target.classList.contains('sortable-item') || e.target.closest('.sortable-item')) {
+                        draggedItem = e.target.classList.contains('sortable-item') ? e.target : e.target.closest('.sortable-item');
+                        dragStartIndex = Array.from(container.children).indexOf(draggedItem);
+                        draggedItem.classList.add('dragging');
+                        
+                        // 设置拖拽图像
+                        e.dataTransfer.effectAllowed = 'move';
+                        e.dataTransfer.setData('text/plain', draggedItem.getAttribute('data-category'));
                     }
                 });
 
-                container.addEventListener("dragend", (e) => {
-                    if (this.dragSrcEl) {
-                        this.dragSrcEl.classList.remove("dragging");
-                        // 移除所有over类
-                        container.querySelectorAll(".sortable-item").forEach(item => {
-                            item.classList.remove("over");
-                        });
-                        this.dragSrcEl = null;
-                    }
-                });
-
-                container.addEventListener("dragover", (e) => {
+                container.addEventListener('dragover', (e) => {
                     e.preventDefault();
-                    if (!this.dragSrcEl) return;
-                    
-                    const afterElement = this.getDragAfterElement(container, e.clientY);
-                    const draggable = this.dragSrcEl;
-                    
-                    // 移除所有over类
-                    container.querySelectorAll(".sortable-item").forEach(item => {
-                        item.classList.remove("over");
-                    });
-                    
-                    if (afterElement) {
-                        afterElement.classList.add("over");
-                    }
-                });
+                    if (!draggedItem) return;
 
-                container.addEventListener("drop", (e) => {
-                    e.preventDefault();
-                    if (!this.dragSrcEl) return;
-                    
                     const afterElement = this.getDragAfterElement(container, e.clientY);
-                    const draggable = this.dragSrcEl;
+                    const draggable = document.querySelector('.dragging');
                     
-                    if (afterElement) {
-                        container.insertBefore(draggable, afterElement);
-                    } else {
+                    if (afterElement == null) {
                         container.appendChild(draggable);
-                    }
-                    
-                    // 移除所有over类
-                    container.querySelectorAll(".sortable-item").forEach(item => {
-                        item.classList.remove("over");
-                    });
-                    
-                    // 显示保存按钮
-                    if (container.id === "category-body") {
-                        document.getElementById("save-category-order").style.display = "inline-block";
-                    } else if (container.id === "inventory-body") {
-                        document.getElementById("save-inventory-order").style.display = "inline-block";
+                    } else {
+                        container.insertBefore(draggable, afterElement);
                     }
                 });
 
-                // 移动端触摸事件支持
-                this.setupTouchDragForContainer(container);
-            },
-
-            // 为指定容器设置触摸拖拽
-            setupTouchDragForContainer(container) {
-                if (!container) return;
-
-                container.addEventListener("touchstart", (e) => {
-                    const item = e.target.closest(".sortable-item");
-                    if (!item) return;
-
-                    e.preventDefault();
-                    this.draggedItem = item;
-                    this.touchStartY = e.touches[0].clientY;
-                    this.originalIndex = Array.from(container.children).indexOf(item);
+                container.addEventListener('dragend', (e) => {
+                    if (!draggedItem) return;
                     
-                    this.draggedItem.classList.add("dragging");
-                    this.draggedItem.style.transition = "none";
-                }, { passive: false });
+                    draggedItem.classList.remove('dragging');
+                    
+                    const dragEndIndex = Array.from(container.children).indexOf(draggedItem);
+                    if (dragStartIndex !== dragEndIndex) {
+                        // 显示保存按钮
+                        if (container.id === "category-body") {
+                            document.getElementById("save-category-order").style.display = "inline-block";
+                        } else if (container.id === "inventory-body") {
+                            document.getElementById("save-inventory-order").style.display = "inline-block";
+                        }
+                    }
+                    
+                    draggedItem = null;
+                });
 
-                container.addEventListener("touchmove", (e) => {
-                    if (!this.draggedItem) return;
+                // 移动端触摸事件
+                let touchStartY = 0;
+                let currentY = 0;
+                let longPressTimer = null;
+                let isDragging = false;
+
+                container.addEventListener('touchstart', (e) => {
+                    const item = e.target.closest('.sortable-item');
+                    if (!item || isDragging) return;
+
+                    touchStartY = e.touches[0].clientY;
+                    draggedItem = item;
+                    dragStartIndex = Array.from(container.children).indexOf(draggedItem);
+
+                    // 设置长按计时器
+                    longPressTimer = setTimeout(() => {
+                        isDragging = true;
+                        draggedItem.classList.add('dragging');
+                        draggedItem.style.transition = 'none';
+                    }, 500);
+                }, { passive: true });
+
+                container.addEventListener('touchmove', (e) => {
+                    if (!isDragging || !draggedItem) return;
                     
                     e.preventDefault();
-                    const y = e.touches[0].clientY;
-                    const deltaY = y - this.touchStartY;
+                    currentY = e.touches[0].clientY;
+                    const deltaY = currentY - touchStartY;
                     
                     // 移动元素
-                    this.draggedItem.style.transform = `translateY(${deltaY}px)`;
+                    draggedItem.style.transform = `translateY(${deltaY}px)`;
                     
                     // 更新其他元素位置
-                    const items = Array.from(container.querySelectorAll(".sortable-item"));
-                    const draggedIndex = items.indexOf(this.draggedItem);
-                    const draggedRect = this.draggedItem.getBoundingClientRect();
+                    const items = Array.from(container.querySelectorAll('.sortable-item:not(.dragging)'));
+                    const draggedRect = draggedItem.getBoundingClientRect();
                     const draggedCenter = draggedRect.top + draggedRect.height / 2;
                     
                     // 移除所有over类
-                    items.forEach(item => item.classList.remove("over"));
+                    items.forEach(item => item.classList.remove('over'));
                     
-                    for (let i = 0; i < items.length; i++) {
-                        if (i === draggedIndex) continue;
-                        
-                        const item = items[i];
+                    for (const item of items) {
                         const rect = item.getBoundingClientRect();
                         const center = rect.top + rect.height / 2;
                         
-                        if (draggedCenter > center && draggedIndex < i) {
-                            item.classList.add("over");
-                        } else if (draggedCenter < center && draggedIndex > i) {
-                            item.classList.add("over");
+                        if (draggedCenter > center) {
+                            item.classList.add('over');
                         }
                     }
                 }, { passive: false });
 
-                container.addEventListener("touchend", (e) => {
-                    if (!this.draggedItem) return;
+                container.addEventListener('touchend', (e) => {
+                    // 清除长按计时器
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    
+                    if (!isDragging || !draggedItem) {
+                        // 如果不是拖拽模式，允许正常点击
+                        const item = e.target.closest('.sortable-item');
+                        if (item && !isDragging) {
+                            this.handleItemClick(item);
+                        }
+                        return;
+                    }
                     
                     e.preventDefault();
                     
-                    const items = Array.from(container.querySelectorAll(".sortable-item"));
-                    const draggedIndex = items.indexOf(this.draggedItem);
+                    const items = Array.from(container.querySelectorAll('.sortable-item'));
+                    const draggedIndex = items.indexOf(draggedItem);
                     
                     // 找到应该插入的位置
                     let targetIndex = draggedIndex;
-                    const draggedRect = this.draggedItem.getBoundingClientRect();
+                    const draggedRect = draggedItem.getBoundingClientRect();
                     const draggedCenter = draggedRect.top + draggedRect.height / 2;
                     
                     for (let i = 0; i < items.length; i++) {
@@ -2011,21 +2050,21 @@
                     }
                     
                     // 重置样式
-                    this.draggedItem.style.transform = "";
-                    this.draggedItem.style.transition = "";
-                    this.draggedItem.classList.remove("dragging");
+                    draggedItem.style.transform = '';
+                    draggedItem.style.transition = '';
+                    draggedItem.classList.remove('dragging');
                     
                     // 移除所有over类
-                    items.forEach(item => item.classList.remove("over"));
+                    items.forEach(item => item.classList.remove('over'));
                     
                     // 移动元素到新位置
-                    if (targetIndex !== draggedIndex) {
+                    if (targetIndex !== dragStartIndex) {
                         if (targetIndex === items.length - 1) {
-                            container.appendChild(this.draggedItem);
+                            container.appendChild(draggedItem);
                         } else if (targetIndex < draggedIndex) {
-                            container.insertBefore(this.draggedItem, items[targetIndex]);
+                            container.insertBefore(draggedItem, items[targetIndex]);
                         } else {
-                            container.insertBefore(this.draggedItem, items[targetIndex + 1]);
+                            container.insertBefore(draggedItem, items[targetIndex + 1]);
                         }
                         
                         // 显示保存按钮
@@ -2036,18 +2075,34 @@
                         }
                     }
                     
-                    this.draggedItem = null;
-                }, { passive: false });
+                    isDragging = false;
+                    draggedItem = null;
+                });
+
+                // 触摸取消事件
+                container.addEventListener('touchcancel', () => {
+                    if (longPressTimer) {
+                        clearTimeout(longPressTimer);
+                        longPressTimer = null;
+                    }
+                    if (draggedItem) {
+                        draggedItem.style.transform = '';
+                        draggedItem.style.transition = '';
+                        draggedItem.classList.remove('dragging');
+                        isDragging = false;
+                        draggedItem = null;
+                    }
+                });
             },
 
             // 获取拖拽后的元素位置
             getDragAfterElement(container, y) {
-                const draggableElements = [...container.querySelectorAll(".sortable-item:not(.dragging)")];
-                
+                const draggableElements = [...container.querySelectorAll('.sortable-item:not(.dragging)')];
+
                 return draggableElements.reduce((closest, child) => {
                     const box = child.getBoundingClientRect();
                     const offset = y - box.top - box.height / 2;
-                    
+
                     if (offset < 0 && offset > closest.offset) {
                         return { offset: offset, element: child };
                     } else {
@@ -2056,7 +2111,13 @@
                 }, { offset: Number.NEGATIVE_INFINITY }).element;
             },
 
-            // 保存品类排序 - 修复版本
+            // 处理项目点击（非拖拽）
+            handleItemClick(item) {
+                // 这里可以添加点击项目的处理逻辑
+                console.log("项目被点击:", item.getAttribute("data-category"));
+            },
+
+            // 保存品类排序
             saveCategoryOrder() {
                 const container = document.getElementById("category-body");
                 const items = Array.from(container.querySelectorAll(".sortable-item"));
@@ -2706,6 +2767,47 @@
                 this.renderCategoryDropdown(); // 更新搜索下拉框
 
                 alert("品类已更新！");
+            },
+
+            // 删除品类
+            deleteCategory(category) {
+                if (!confirm(`确定要删除品类"${category}"吗？此操作不可撤销！`)) {
+                    return;
+                }
+
+                // 保存当前状态到历史堆栈
+                DataManager.saveStateToHistory();
+
+                // 删除品类配置
+                delete DataManager.categoryConfig[category];
+
+                // 从排序列表中删除该品类
+                DataManager.categoryOrder = DataManager.categoryOrder.filter(
+                    (cat) => cat !== category
+                );
+
+                // 从所有部门中删除该品类
+                for (const department in DataManager.inventoryData) {
+                    if (DataManager.inventoryData[department][category]) {
+                        delete DataManager.inventoryData[department][category];
+                    }
+                }
+
+                // 从操作记录中过滤掉该品类的记录
+                DataManager.operationHistory = DataManager.operationHistory.filter(
+                    (record) => record.category !== category
+                );
+
+                // 保存数据
+                DataManager.saveAllData();
+
+                // 更新UI
+                this.renderCategorySelects();
+                this.renderCategoryTable();
+                this.renderInventoryTable();
+                this.renderCategoryDropdown(); // 更新搜索下拉框
+
+                alert("品类已删除！");
             },
 
             // 渲染部门管理表格
