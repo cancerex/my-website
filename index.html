@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>老奶奶面馆库存管理系统</title>
+    <title>老奶奶面馆库存管理系统beta4.0</title>
     <style>
       :root {
         --primary-color: #3498db;
@@ -470,6 +470,45 @@
         border-bottom: none;
       }
 
+      /* 拖拽排序样式 */
+      .sortable-item {
+        cursor: move;
+        transition: all 0.2s ease;
+      }
+
+      .sortable-item.dragging {
+        opacity: 0.5;
+        background-color: #f8f9fa;
+      }
+
+      .sortable-item.over {
+        border-top: 2px solid var(--primary-color);
+      }
+
+      .drag-handle {
+        cursor: move;
+        color: #666;
+        margin-right: 8px;
+        font-size: 1rem;
+      }
+
+      /* 默认部门设置样式 */
+      .default-dept-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 8px;
+      }
+
+      .default-dept-badge {
+        background-color: var(--success-color);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.7rem;
+        font-weight: bold;
+      }
+
       /* 移动端优化 */
       @media (max-width: 768px) {
         body {
@@ -593,6 +632,11 @@
 
         .search-select-dropdown {
           max-height: 150px;
+        }
+
+        .default-dept-container {
+          flex-direction: column;
+          align-items: flex-start;
         }
       }
 
@@ -767,9 +811,13 @@
 
               <div class="form-group" id="department-group">
                 <label for="department">部门</label>
-                <select id="department">
-                  <!-- 部门选项将通过JavaScript动态生成 -->
-                </select>
+                <div class="default-dept-container">
+                  <select id="department">
+                    <!-- 部门选项将通过JavaScript动态生成 -->
+                  </select>
+                  <button class="btn btn-info" id="set-default-dept">设为默认</button>
+                </div>
+                <div id="default-dept-info" style="margin-top: 5px; font-size: 0.8rem; color: #666;"></div>
               </div>
 
               <div class="form-group" id="transfer-group" style="display: none">
@@ -924,12 +972,16 @@
                 <button class="btn btn-warning" id="reset-category-search">
                   重置
                 </button>
+                <button class="btn btn-primary" id="save-category-order">
+                  保存排序
+                </button>
               </div>
 
               <div class="table-container">
                 <table>
                   <thead>
                     <tr>
+                      <th style="width: 40px;">排序</th>
                       <th>品类名称</th>
                       <th>单位</th>
                       <th>默认单价(元)</th>
@@ -937,7 +989,7 @@
                       <th>操作</th>
                     </tr>
                   </thead>
-                  <tbody id="category-body">
+                  <tbody id="category-body" class="sortable-container">
                     <!-- 品类数据将通过JavaScript动态生成 -->
                   </tbody>
                 </table>
@@ -1165,6 +1217,12 @@
           鸡精: { unit: "箱", defaultPrice: 90, warningValue: 5 },
         },
 
+        // 品类排序配置
+        categoryOrder: JSON.parse(localStorage.getItem("categoryOrder")) || [],
+
+        // 默认部门设置
+        defaultDepartment: localStorage.getItem("defaultDepartment") || "",
+
         // 初始化库存数据 - 按部门独立
         inventoryData: JSON.parse(localStorage.getItem("inventoryData")) || {},
 
@@ -1184,6 +1242,46 @@
         // 历史状态堆栈，用于撤销操作
         historyStack: JSON.parse(localStorage.getItem("historyStack")) || [],
 
+        // 获取排序后的品类列表
+        getSortedCategories() {
+          // 如果还没有排序数据，使用默认排序（按字母顺序）
+          if (this.categoryOrder.length === 0) {
+            this.categoryOrder = Object.keys(this.categoryConfig).sort();
+          }
+          
+          // 确保所有品类都在排序列表中
+          const allCategories = Object.keys(this.categoryConfig);
+          const newCategories = allCategories.filter(cat => !this.categoryOrder.includes(cat));
+          if (newCategories.length > 0) {
+            this.categoryOrder = [...this.categoryOrder, ...newCategories];
+            this.saveCategoryOrder();
+          }
+          
+          return this.categoryOrder;
+        },
+
+        // 更新品类排序
+        updateCategoryOrder(newOrder) {
+          this.categoryOrder = newOrder;
+          this.saveCategoryOrder();
+        },
+
+        // 保存品类排序
+        saveCategoryOrder() {
+          localStorage.setItem("categoryOrder", JSON.stringify(this.categoryOrder));
+        },
+
+        // 设置默认部门
+        setDefaultDepartment(department) {
+          this.defaultDepartment = department;
+          localStorage.setItem("defaultDepartment", department);
+        },
+
+        // 获取默认部门
+        getDefaultDepartment() {
+          return this.defaultDepartment;
+        },
+
         // 保存当前状态到历史堆栈
         saveStateToHistory() {
           // 最多保存10个历史状态
@@ -1197,6 +1295,7 @@
             departmentConfig: JSON.parse(JSON.stringify(this.departmentConfig)),
             operationHistory: JSON.parse(JSON.stringify(this.operationHistory)),
             categoryConfig: JSON.parse(JSON.stringify(this.categoryConfig)),
+            categoryOrder: JSON.parse(JSON.stringify(this.categoryOrder)),
           });
 
           // 保存历史堆栈到本地存储
@@ -1468,6 +1567,12 @@
         currentInventoryDept:
           Object.keys(DataManager.departmentConfig)[0] || "",
 
+        // 拖拽相关变量
+        dragSrcEl: null,
+        draggedItem: null,
+        touchStartY: 0,
+        originalIndex: 0,
+
         // 初始化UI
         initializeUI() {
           // 先初始化数据
@@ -1680,6 +1785,19 @@
               this.viewDepartmentHistory(department);
             }
           });
+
+          // 保存品类排序按钮
+          document
+            .getElementById("save-category-order")
+            .addEventListener("click", () => this.saveCategoryOrder());
+
+          // 设置默认部门按钮
+          document
+            .getElementById("set-default-dept")
+            .addEventListener("click", () => this.setDefaultDepartment());
+
+          // 初始化拖拽功能
+          this.setupDragAndDrop();
         },
 
         // 设置品类搜索下拉框
@@ -1723,6 +1841,247 @@
           });
         },
 
+        // 设置拖拽排序功能 - 修复版本
+        setupDragAndDrop() {
+          const container = document.getElementById("category-body");
+          
+          if (!container) return;
+
+          // 桌面端拖拽事件
+          container.addEventListener("dragstart", (e) => {
+            if (e.target.classList.contains("sortable-item") || e.target.closest(".sortable-item")) {
+              const item = e.target.classList.contains("sortable-item") ? e.target : e.target.closest(".sortable-item");
+              this.dragSrcEl = item;
+              item.classList.add("dragging");
+              e.dataTransfer.effectAllowed = "move";
+              e.dataTransfer.setData("text/plain", item.getAttribute("data-category"));
+            }
+          });
+
+          container.addEventListener("dragend", (e) => {
+            if (this.dragSrcEl) {
+              this.dragSrcEl.classList.remove("dragging");
+              // 移除所有over类
+              document.querySelectorAll(".sortable-item").forEach(item => {
+                item.classList.remove("over");
+              });
+              this.dragSrcEl = null;
+            }
+          });
+
+          container.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            if (!this.dragSrcEl) return;
+            
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+            const draggable = this.dragSrcEl;
+            
+            // 移除所有over类
+            document.querySelectorAll(".sortable-item").forEach(item => {
+              item.classList.remove("over");
+            });
+            
+            if (afterElement) {
+              afterElement.classList.add("over");
+            }
+          });
+
+          container.addEventListener("drop", (e) => {
+            e.preventDefault();
+            if (!this.dragSrcEl) return;
+            
+            const afterElement = this.getDragAfterElement(container, e.clientY);
+            const draggable = this.dragSrcEl;
+            
+            if (afterElement) {
+              container.insertBefore(draggable, afterElement);
+            } else {
+              container.appendChild(draggable);
+            }
+            
+            // 移除所有over类
+            document.querySelectorAll(".sortable-item").forEach(item => {
+              item.classList.remove("over");
+            });
+            
+            // 显示保存按钮
+            document.getElementById("save-category-order").style.display = "inline-block";
+          });
+
+          // 移动端触摸事件支持
+          this.setupTouchDragAndDrop();
+        },
+
+        // 获取拖拽后的元素位置
+        getDragAfterElement(container, y) {
+          const draggableElements = [...container.querySelectorAll(".sortable-item:not(.dragging)")];
+          
+          return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            
+            if (offset < 0 && offset > closest.offset) {
+              return { offset: offset, element: child };
+            } else {
+              return closest;
+            }
+          }, { offset: Number.NEGATIVE_INFINITY }).element;
+        },
+
+        // 设置移动端触摸拖拽
+        setupTouchDragAndDrop() {
+          const container = document.getElementById("category-body");
+          if (!container) return;
+
+          container.addEventListener("touchstart", (e) => {
+            const item = e.target.closest(".sortable-item");
+            if (!item) return;
+
+            e.preventDefault();
+            this.draggedItem = item;
+            this.touchStartY = e.touches[0].clientY;
+            this.originalIndex = Array.from(container.children).indexOf(item);
+            
+            this.draggedItem.classList.add("dragging");
+            this.draggedItem.style.transition = "none";
+          }, { passive: false });
+
+          container.addEventListener("touchmove", (e) => {
+            if (!this.draggedItem) return;
+            
+            e.preventDefault();
+            const y = e.touches[0].clientY;
+            const deltaY = y - this.touchStartY;
+            
+            // 移动元素
+            this.draggedItem.style.transform = `translateY(${deltaY}px)`;
+            
+            // 更新其他元素位置
+            const items = Array.from(container.querySelectorAll(".sortable-item"));
+            const draggedIndex = items.indexOf(this.draggedItem);
+            const draggedRect = this.draggedItem.getBoundingClientRect();
+            const draggedCenter = draggedRect.top + draggedRect.height / 2;
+            
+            // 移除所有over类
+            items.forEach(item => item.classList.remove("over"));
+            
+            for (let i = 0; i < items.length; i++) {
+              if (i === draggedIndex) continue;
+              
+              const item = items[i];
+              const rect = item.getBoundingClientRect();
+              const center = rect.top + rect.height / 2;
+              
+              if (draggedCenter > center && draggedIndex < i) {
+                item.classList.add("over");
+              } else if (draggedCenter < center && draggedIndex > i) {
+                item.classList.add("over");
+              }
+            }
+          }, { passive: false });
+
+          container.addEventListener("touchend", (e) => {
+            if (!this.draggedItem) return;
+            
+            e.preventDefault();
+            
+            const items = Array.from(container.querySelectorAll(".sortable-item"));
+            const draggedIndex = items.indexOf(this.draggedItem);
+            
+            // 找到应该插入的位置
+            let targetIndex = draggedIndex;
+            const draggedRect = this.draggedItem.getBoundingClientRect();
+            const draggedCenter = draggedRect.top + draggedRect.height / 2;
+            
+            for (let i = 0; i < items.length; i++) {
+              if (i === draggedIndex) continue;
+              
+              const item = items[i];
+              const rect = item.getBoundingClientRect();
+              const center = rect.top + rect.height / 2;
+              
+              if (draggedCenter > center && draggedIndex < i) {
+                targetIndex = i;
+              } else if (draggedCenter < center && draggedIndex > i) {
+                targetIndex = i;
+                break;
+              }
+            }
+            
+            // 重置样式
+            this.draggedItem.style.transform = "";
+            this.draggedItem.style.transition = "";
+            this.draggedItem.classList.remove("dragging");
+            
+            // 移除所有over类
+            items.forEach(item => item.classList.remove("over"));
+            
+            // 移动元素到新位置
+            if (targetIndex !== draggedIndex) {
+              if (targetIndex === items.length - 1) {
+                container.appendChild(this.draggedItem);
+              } else if (targetIndex < draggedIndex) {
+                container.insertBefore(this.draggedItem, items[targetIndex]);
+              } else {
+                container.insertBefore(this.draggedItem, items[targetIndex + 1]);
+              }
+              
+              // 显示保存按钮
+              document.getElementById("save-category-order").style.display = "inline-block";
+            }
+            
+            this.draggedItem = null;
+          }, { passive: false });
+        },
+
+        // 保存品类排序 - 修复版本
+        saveCategoryOrder() {
+          const container = document.getElementById("category-body");
+          const items = Array.from(container.querySelectorAll(".sortable-item"));
+          const newOrder = items.map(item => item.getAttribute("data-category"));
+          
+          // 保存当前状态到历史堆栈
+          DataManager.saveStateToHistory();
+          
+          // 更新排序
+          DataManager.updateCategoryOrder(newOrder);
+          
+          // 隐藏保存按钮
+          document.getElementById("save-category-order").style.display = "none";
+          
+          alert("品类排序已保存！");
+          
+          // 重新渲染表格以确保一致性
+          this.renderCategoryTable();
+        },
+
+        // 设置默认部门
+        setDefaultDepartment() {
+          const departmentSelect = document.getElementById("department");
+          const selectedDepartment = departmentSelect.value;
+          
+          if (!selectedDepartment) {
+            alert("请先选择一个部门！");
+            return;
+          }
+          
+          DataManager.setDefaultDepartment(selectedDepartment);
+          this.updateDefaultDepartmentInfo();
+          alert(`已将"${selectedDepartment}"设为默认部门！`);
+        },
+
+        // 更新默认部门信息显示
+        updateDefaultDepartmentInfo() {
+          const defaultDept = DataManager.getDefaultDepartment();
+          const infoElement = document.getElementById("default-dept-info");
+          
+          if (defaultDept) {
+            infoElement.innerHTML = `<span class="default-dept-badge">默认部门: ${defaultDept}</span>`;
+          } else {
+            infoElement.innerHTML = "";
+          }
+        },
+
         // 渲染品类搜索下拉框
         renderCategoryDropdown(searchTerm = "") {
           const dropdown = document.getElementById("category-dropdown");
@@ -1730,7 +2089,10 @@
 
           let hasResults = false;
 
-          for (const category in DataManager.categoryConfig) {
+          // 使用排序后的品类列表
+          const sortedCategories = DataManager.getSortedCategories();
+
+          for (const category of sortedCategories) {
             if (searchTerm && !category.toLowerCase().includes(searchTerm)) {
               continue;
             }
@@ -1761,6 +2123,9 @@
           this.renderDepartmentTable();
           this.renderDashboard();
 
+          // 更新默认部门信息
+          this.updateDefaultDepartmentInfo();
+
           // 更新报表
           this.generateCustomReport();
         },
@@ -1774,8 +2139,11 @@
           reportCategorySelect.innerHTML =
             '<option value="all">所有品类</option>';
 
+          // 使用排序后的品类列表
+          const sortedCategories = DataManager.getSortedCategories();
+
           // 添加品类选项
-          for (const category in DataManager.categoryConfig) {
+          for (const category of sortedCategories) {
             // 自定义报表的品类选择
             const reportOption = document.createElement("option");
             reportOption.value = category;
@@ -1822,8 +2190,11 @@
             reportDepartmentSelect.appendChild(reportOption);
           }
 
-          // 设置默认选中
-          if (
+          // 设置默认选中 - 优先使用用户设置的默认部门
+          const defaultDept = DataManager.getDefaultDepartment();
+          if (defaultDept && DataManager.departmentConfig[defaultDept]) {
+            departmentSelect.value = defaultDept;
+          } else if (
             this.currentInventoryDept &&
             DataManager.departmentConfig[this.currentInventoryDept]
           ) {
@@ -1860,7 +2231,15 @@
 
           let hasData = false;
 
-          for (const category in DataManager.inventoryData[department]) {
+          // 使用排序后的品类列表
+          const sortedCategories = DataManager.getSortedCategories();
+
+          for (const category of sortedCategories) {
+            // 检查该品类在该部门是否存在
+            if (!DataManager.inventoryData[department][category]) {
+              continue;
+            }
+
             // 搜索过滤
             if (searchTerm && !category.toLowerCase().includes(searchTerm)) {
               continue;
@@ -2079,7 +2458,7 @@
           deptHistorySection.scrollIntoView({ behavior: "smooth" });
         },
 
-        // 渲染品类管理表格
+        // 渲染品类管理表格（支持拖拽排序）- 修复版本
         renderCategoryTable() {
           const categoryBody = document.getElementById("category-body");
           categoryBody.innerHTML = "";
@@ -2090,7 +2469,10 @@
 
           let hasData = false;
 
-          for (const category in DataManager.categoryConfig) {
+          // 使用排序后的品类列表
+          const sortedCategories = DataManager.getSortedCategories();
+
+          for (const category of sortedCategories) {
             // 搜索过滤
             if (searchTerm && !category.toLowerCase().includes(searchTerm)) {
               continue;
@@ -2099,8 +2481,14 @@
             hasData = true;
             const config = DataManager.categoryConfig[category];
             const row = document.createElement("tr");
+            row.className = "sortable-item";
+            row.setAttribute("draggable", "true");
+            row.setAttribute("data-category", category);
 
             row.innerHTML = `
+                        <td>
+                            <span class="drag-handle">☰</span>
+                        </td>
                         <td>${category}</td>
                         <td>${config.unit}</td>
                         <td>
@@ -2127,11 +2515,17 @@
           // 如果没有数据，显示提示
           if (!hasData) {
             const row = document.createElement("tr");
-            row.innerHTML = `<td colspan="5" style="text-align: center;">${
+            row.innerHTML = `<td colspan="6" style="text-align: center;">${
               searchTerm ? "没有找到匹配的品类" : "暂无品类数据，请先添加品类"
             }</td>`;
             categoryBody.appendChild(row);
           }
+
+          // 隐藏保存排序按钮（如果没有拖拽变化）
+          document.getElementById("save-category-order").style.display = "none";
+          
+          // 重新设置拖拽事件（因为表格内容已更新）
+          this.setupDragAndDrop();
         },
 
         // 更新品类单价
@@ -2216,6 +2610,12 @@
             // 品类名称改变，需要更新所有相关数据
             const oldConfig = DataManager.categoryConfig[category];
             delete DataManager.categoryConfig[category];
+
+            // 更新排序列表中的品类名称
+            const categoryIndex = DataManager.categoryOrder.indexOf(category);
+            if (categoryIndex !== -1) {
+              DataManager.categoryOrder[categoryIndex] = newName;
+            }
 
             // 更新库存数据中的品类名称
             for (const department in DataManager.inventoryData) {
@@ -2744,6 +3144,7 @@
           DataManager.departmentConfig = lastState.departmentConfig;
           DataManager.operationHistory = lastState.operationHistory;
           DataManager.categoryConfig = lastState.categoryConfig;
+          DataManager.categoryOrder = lastState.categoryOrder;
 
           // 保存数据
           DataManager.saveAllData();
@@ -2796,6 +3197,9 @@
             warningValue: warningValue,
           };
 
+          // 将新品类添加到排序列表的末尾
+          DataManager.categoryOrder.push(name);
+
           // 为每个部门初始化该品类的库存数据
           for (const department in DataManager.departmentConfig) {
             if (!DataManager.inventoryData[department]) {
@@ -2841,6 +3245,11 @@
 
           // 删除品类配置
           delete DataManager.categoryConfig[category];
+
+          // 从排序列表中删除该品类
+          DataManager.categoryOrder = DataManager.categoryOrder.filter(
+            (cat) => cat !== category
+          );
 
           // 从所有部门中删除该品类
           for (const department in DataManager.inventoryData) {
@@ -2934,6 +3343,11 @@
               DataManager.departmentConfig[department];
             delete DataManager.departmentConfig[department];
 
+            // 如果这是默认部门，更新默认部门设置
+            if (DataManager.getDefaultDepartment() === department) {
+              DataManager.setDefaultDepartment(newName);
+            }
+
             // 更新库存数据中的部门名称
             DataManager.inventoryData[newName] =
               DataManager.inventoryData[department];
@@ -2959,6 +3373,7 @@
           this.renderInventoryTable();
           this.renderOperationHistory();
           this.renderDashboard();
+          this.updateDefaultDepartmentInfo();
 
           alert("部门已更新！");
         },
@@ -2975,6 +3390,11 @@
           // 删除部门配置
           delete DataManager.departmentConfig[department];
 
+          // 如果这是默认部门，清除默认部门设置
+          if (DataManager.getDefaultDepartment() === department) {
+            DataManager.setDefaultDepartment("");
+          }
+
           // 删除库存数据中的部门
           delete DataManager.inventoryData[department];
 
@@ -2985,6 +3405,7 @@
           this.renderDepartmentSelect();
           this.renderDepartmentTable();
           this.renderDashboard();
+          this.updateDefaultDepartmentInfo();
 
           alert("部门已删除！");
         },
@@ -3045,6 +3466,8 @@
             inventoryData: DataManager.inventoryData,
             departmentConfig: DataManager.departmentConfig,
             operationHistory: DataManager.operationHistory,
+            categoryOrder: DataManager.categoryOrder,
+            defaultDepartment: DataManager.defaultDepartment,
             exportDate: new Date().toISOString(),
           };
 
@@ -3104,6 +3527,8 @@
               DataManager.inventoryData = data.inventoryData;
               DataManager.departmentConfig = data.departmentConfig;
               DataManager.operationHistory = data.operationHistory;
+              DataManager.categoryOrder = data.categoryOrder || Object.keys(data.categoryConfig).sort();
+              DataManager.defaultDepartment = data.defaultDepartment || "";
 
               // 保存数据
               DataManager.saveAllData();
@@ -3135,8 +3560,13 @@
           let csvContent =
             "品类,单位,部门,进货量,消耗量,库存量,单价,库存金额,预警值\n";
 
+          // 使用排序后的品类列表
+          const sortedCategories = DataManager.getSortedCategories();
+
           for (const department in DataManager.inventoryData) {
-            for (const category in DataManager.inventoryData[department]) {
+            for (const category of sortedCategories) {
+              if (!DataManager.inventoryData[department][category]) continue;
+              
               const item = DataManager.inventoryData[department][category];
               const stock = item.purchase - item.consume;
               const stockAmount = stock * item.currentPrice;
